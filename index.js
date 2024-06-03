@@ -40,7 +40,7 @@ app.use('/password', require('./routes/password'));
 
 // Example route using asyncHandler directly in app.js
 app.get('/', asyncHandler(async (req, res) => {
-    res.json({ success: true, message: 'API working successfully', data: null });
+    res.send(<h1>Hello get</h1>);
 }));
 
 // Global error handler
