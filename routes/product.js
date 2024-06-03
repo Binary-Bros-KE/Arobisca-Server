@@ -10,26 +10,12 @@ router.get('/', asyncHandler(async (req, res) => {
     try {
         const products = await Product.find()
         .populate('proCategoryId', 'id name')
-        // .populate('proSubCategoryId', 'id name')
-        // .populate('proBrandId', 'id name')
-        // .populate('proVariantTypeId', 'id type')
-        // .populate('proVariantId', 'id name');
         res.json({ success: true, message: "Products retrieved successfully.", data: products });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 }));
 
-// Get all products
-// router.get('/', asyncHandler(async (req, res) => {
-//     try {
-//         const products = await Product.find()
-//             .populate('proCategoryId', 'id name');
-//         res.json({ success: true, message: "Products retrieved successfully.", data: products });
-//     } catch (error) {
-//         res.status(500).json({ success: false, message: error.message });
-//     }
-// }));
 
 
 // Get a product by ID
@@ -94,7 +80,7 @@ router.post('/', asyncHandler(async (req, res) => {
             fields.forEach((field, index) => {
                 if (req.files[field] && req.files[field].length > 0) {
                     const file = req.files[field][0];
-                    const imageUrl = `http://localhost:3000/image/products/${file.filename}`;
+                    const imageUrl = `${process.env.SERVER_URL}/image/products/${file.filename}`;
                     imageUrls.push({ image: index + 1, url: imageUrl });
                 }
             });
@@ -160,7 +146,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
             fields.forEach((field, index) => {
                 if (req.files[field] && req.files[field].length > 0) {
                     const file = req.files[field][0];
-                    const imageUrl = `http://localhost:3000/image/products/${file.filename}`;
+                    const imageUrl = `${process.env.SERVER_URL}/image/products/${file.filename}`;
                     // Update the specific image URL in the images array
                     let imageEntry = productToUpdate.images.find(img => img.image === (index + 1));
                     if (imageEntry) {
