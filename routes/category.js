@@ -40,15 +40,15 @@ router.post('/', asyncHandler(async (req, res) => {
                     err.message = 'File size is too large. Maximum filesize is 5MB.';
                 }
                 console.log(`Add category: ${err}`);
-                return res.json({ success: 'false-1', message: err });
+                return res.json({ success: false, message: err });
             } else if (err) {
                 console.log(`Add category: ${err}`);
-                return res.json({ success: 'falsee-2', message: err });
+                return res.json({ success: false, message: err });
             }
             const { name } = req.body;
             let imageUrl = 'no_url';
             if (req.file) {
-                imageUrl = `http://localhost:3000/image/category/${req.file.filename}`;
+                imageUrl = `${process.env.SERVER_URL}/image/category/${req.file.filename}`;
             }
             console.log('url ', req.file)
 
@@ -96,7 +96,7 @@ router.put('/:id', asyncHandler(async (req, res) => {
             let image = req.body.image;
 
             if (req.file) {
-                image = `http://localhost:3000/image/category/${req.file.filename}`;
+                image = `${process.env.SERVER_URL}/image/category/${req.file.filename}`;
             }
 
             if (!name || !image) {
