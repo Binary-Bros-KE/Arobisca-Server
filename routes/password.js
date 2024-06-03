@@ -25,7 +25,7 @@ const transporter = nodemailer.createTransport({
 
   // Create a new variant type
 router.post('/', asyncHandler(async (req, res) => {
-    res.status(200).json({ message: 'ROUTE WORKS NICEE' });
+    res.status(200).json({ message: 'PASSWORD ROUTE WORKS NICEE' });
 }));
 
 // Request password reset
