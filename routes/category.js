@@ -40,10 +40,10 @@ router.post('/', asyncHandler(async (req, res) => {
                     err.message = 'File size is too large. Maximum filesize is 5MB.';
                 }
                 console.log(`Add category: ${err}`);
-                return res.json({ success: false, message: err });
+                return res.json({ success: 'false-1', message: err });
             } else if (err) {
                 console.log(`Add category: ${err}`);
-                return res.json({ success: false, message: err });
+                return res.json({ success: 'falsee-2', message: err });
             }
             const { name } = req.body;
             let imageUrl = 'no_url';
