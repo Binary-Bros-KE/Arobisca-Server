@@ -33,16 +33,7 @@ router.get('/token', generateToken, asyncHandler(async (req, res) => {
 router.post('/stk', generateToken, asyncHandler(async (req, res) => {
     const { phone, amount } = req.body;
     const formattedPhone = phone.substring(1);
-    // const date = new Date();
-    // const timestamp = date.getFullYear() +
-    //     ("0" + (date.getMonth() + 1)).slice(-2) +
-    //     ("0" + date.getDate()).slice(-2) +
-    //     ("0" + date.getHours()).slice(-2) +
-    //     ("0" + date.getMinutes()).slice(-2) +
-    //     ("0" + date.getSeconds()).slice(-2);
     const shortcode = process.env.MPESA_PAYBILL;
-    // const passkey = process.env.SECURITY_CREDENTIAL;
-    // const password = Buffer.from(shortcode + passkey + timestamp).toString("base64");
     const reqUrl = 'https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest';
 
     try {

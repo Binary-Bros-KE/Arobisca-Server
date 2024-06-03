@@ -31,6 +31,29 @@ router.get('/:id', asyncHandler(async (req, res) => {
     }
 }));
 
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
+
+// Multer storage configuration
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        const uploadPath = 'public/category';
+        
+        // Check if directory exists, if not, create it
+        if (!fs.existsSync(uploadPath)) {
+            fs.mkdirSync(uploadPath, { recursive: true });
+        }
+        
+        cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+        cb(null, `${Date.now()}_${file.originalname}`);
+    }
+});
+
+const uploadCategory = multer({ storage });
+
 // Create a new category with image upload
 router.post('/', asyncHandler(async (req, res) => {
     try {
@@ -50,7 +73,7 @@ router.post('/', asyncHandler(async (req, res) => {
             if (req.file) {
                 imageUrl = `${process.env.SERVER_URL}/image/category/${req.file.filename}`;
             }
-            console.log('url ', req.file)
+            console.log('url ', req.file);
 
             if (!name) {
                 return res.status(400).json({ success: false, message: "Name is required." });
@@ -67,14 +90,13 @@ router.post('/', asyncHandler(async (req, res) => {
                 console.error("Error creating category:", error);
                 res.status(500).json({ success: false, message: error.message });
             }
-
         });
-
     } catch (err) {
         console.log(`Error creating category: ${err.message}`);
         return res.status(500).json({ success: false, message: err.message });
     }
 }));
+
 
 // Update a category
 router.put('/:id', asyncHandler(async (req, res) => {
