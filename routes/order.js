@@ -56,7 +56,7 @@ router.post('/', asyncHandler(async (req, res) => {
     try {
         const order = new Order({ userID,orderStatus, items, totalPrice, shippingAddress, paymentMethod, couponCode, orderTotal, trackingUrl });
         const newOrder = await order.save();
-        res.json({ success: true, message: "Order created successfully.", data: null });
+        res.json({ success: true, message: "Order placed successfully.", data: null });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
