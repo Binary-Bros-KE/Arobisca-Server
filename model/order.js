@@ -54,7 +54,7 @@ const orderSchema = new mongoose.Schema({
 
   paymentMethod: {
     type: String,
-    enum: ['cod', 'prepaid']
+    enum: ['Cash On Delivery', 'Prepaid - Lipa na M-pesa']
   },
 
   couponCode: {
