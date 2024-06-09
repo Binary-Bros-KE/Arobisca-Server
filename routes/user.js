@@ -64,7 +64,7 @@ router.get('/:id', asyncHandler(async (req, res) => {
 }));
 
 //-------------- Register new user
-router.post('/eminem', async (req, res) => {
+router.post('/register', async (req, res) => {
     const { username, email, phoneNumber, password } = req.body;
   
     // Validate input
