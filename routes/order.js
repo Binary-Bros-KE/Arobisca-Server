@@ -8,7 +8,7 @@ router.get('/', asyncHandler(async (req, res) => {
     try {
         const orders = await Order.find()
         .populate('couponCode', 'id couponCode discountType discountAmount')
-        .populate('userID', 'id name').sort({ _id: -1 });
+        .populate('userID', 'id email').sort({ _id: -1 });
         res.json({ success: true, message: "Orders retrieved successfully.", data: orders });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });

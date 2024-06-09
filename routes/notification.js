@@ -11,6 +11,7 @@ const client = new OneSignal.Client(process.env.ONE_SIGNAL_APP_ID, process.env.O
 
 router.post('/send-notification', asyncHandler(async (req, res) => {
     const { title, description, imageUrl } = req.body;
+    console.log("Notification Initialized");
 
     const notificationBody = {
         contents: {
@@ -19,16 +20,24 @@ router.post('/send-notification', asyncHandler(async (req, res) => {
         headings: {
             'en': title
         },
-        included_segments: ['All'],
+        included_segments: ['Subscribed Users'],  // Ensure this segment exists and has users
         ...(imageUrl && { big_picture: imageUrl })
     };
 
-    const response = await client.createNotification(notificationBody);
-    const notificationId = response.body.id;
-    console.log('Notification sent to all users:', notificationId);
-    const notification = new Notification({ notificationId, title,description,imageUrl });
-    const newNotification = await notification.save();
-    res.json({ success: true, message: 'Notification sent successfully', data: null });
+    try {
+        const response = await client.createNotification(notificationBody);
+        console.log('Notification Response:', response.body);
+        if (response.body.errors) {
+            console.error('Errors:', response.body.errors);
+            return res.status(400).json({ success: false, message: response.body.errors });
+        }
+        const notificationId = response.body.id;
+        console.log('Notification sent to all users:', notificationId);
+        res.json({ success: true, message: 'Notification sent successfully', data: { notificationId } });
+    } catch (error) {
+        console.error('Error sending notification:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
 }));
 
 router.get('/track-notification/:id', asyncHandler(async (req, res) => {

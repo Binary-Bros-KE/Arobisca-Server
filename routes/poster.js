@@ -59,6 +59,7 @@ router.post('/', asyncHandler(async (req, res) => {
                     imageUrl: imageUrl
                 });
                 await newPoster.save();
+                console.log("Poster created successfully;")
                 res.json({ success: true, message: "Poster created successfully.", data: null });
             } catch (error) {
                 console.error("Error creating Poster:", error);
