@@ -7,9 +7,10 @@ const router = express.Router();
 const generateToken = async (req, res, next) => {
     const secretKey = process.env.MPESA_CONSUMER_SECRET;
     const consumerKey = process.env.MPESA_CONSUMER_KEY;
+    console.log("Token inititiated");
     const auth = Buffer.from(`${consumerKey}:${secretKey}`).toString("base64");
     const authUrl = 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials';
-
+    console.log("Request sent Token inititiated");
     try {
         const response = await axios.get(authUrl, {
             headers: {
@@ -17,6 +18,7 @@ const generateToken = async (req, res, next) => {
             }
         });
         req.token = response.data.access_token;
+        console.log("Token");
         next();
     } catch (err) {
         console.error('Error generating token:', err.message);
