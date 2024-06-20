@@ -30,6 +30,14 @@ const userSchema = new mongoose.Schema({
   updatedAt: {
     type: Date,
     default: Date.now
+  },
+  resetCode: {
+    type: String,
+    required: false
+  },
+  resetCodeExpiration: {
+    type: Date,
+    required: false
   }
 });
 

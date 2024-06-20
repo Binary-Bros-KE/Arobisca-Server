@@ -6,7 +6,7 @@ const asyncHandler = require('express-async-handler');
 const nodemailer = require('nodemailer');
 const jwt = require('jsonwebtoken');
 
-//------ create email transporter service
+// Create email transporter service
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     port: 465,
@@ -15,99 +15,99 @@ const transporter = nodemailer.createTransport({
     debug: false,
     secureConnection: false,
     auth: {
-      user: process.env.AROBISCA_EMAIL, // Use environment variables for sensitive info
-      pass: process.env.AROBISCA_EMAIL_PASSWORD,
+        user: process.env.AROBISCA_EMAIL, // Use environment variables for sensitive info
+        pass: process.env.AROBISCA_EMAIL_PASSWORD,
     },
     tls: {
-        rejectUnAuthorized: true
+        rejectUnauthorized: true
     }
-  });
+});
 
-  // Create a new variant type
-router.post('/', asyncHandler(async (req, res) => {
-    res.status(200).json({ message: 'PASSWORD ROUTE WORKS NICEE' });
-}));
+// Helper function to generate random code
+const generateRandomCode = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString(); // Generates a 6-digit code
+};
 
 // Request password reset
 router.post('/requestPasswordReset', asyncHandler(async (req, res) => {
     const { email } = req.body;
-    console.log(email)
 
     try {
         const user = await User.findOne({ email });
         if (!user) {
-          return res.status(404).json({ message: 'User does not exist in database' });
+            return res.status(404).json({ message: 'User does not exist in database' });
         }
-    
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
-    
-        const url = `${process.env.FRONTEND_URL}/password/resetPassword/${token}`;
-    
+
+        console.log(user);
+
+        const resetCode = generateRandomCode();
+        const expirationTime = Date.now() + 3600000; // 1 hour from now
+
+        // Save the reset code and expiration time to the user
+        user.resetCode = resetCode;
+        user.resetCodeExpiration = expirationTime;
+        await user.save();
+
+        // Send reset code via email
         await transporter.sendMail({
-          to: user.email,
-          subject: 'We have received a Password Reset Request',
-          html: `<p>Please click <a href="${url}">here</a> to reset your password. This link will expire in 1 hour.</p>`
+            to: user.email,
+            subject: 'Password Reset Code',
+            html: `<p>Your password reset code is <strong>${resetCode}</strong>. It will expire in 1 hour.</p>`
         });
-    
-        res.status(200).json({ message: 'Password reset email sent' });
-      } catch (error) {
+
+        res.status(200).json({ message: 'Password reset code sent' });
+    } catch (error) {
         console.error('Error requesting password reset:', error);
         res.status(500).json({ message: 'Error requesting password reset', error: error.message });
-      }
+    }
 }));
 
-// Get a variant type by ID
-router.post('/resetPassword/:token', asyncHandler(async (req, res) => {
-    const { token } = req.params;
-    const { newPassword } = req.body;
+// Verify reset code
+router.post('/verifyResetCode', asyncHandler(async (req, res) => {
+    const { email, resetCode } = req.body;
 
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.userId);
+    try {
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: 'User does not exist in database' });
+        }
 
-    if (!user) {
-      return res.status(404).json({ message: 'User does not exist in database' });
+        if (user.resetCode !== resetCode || Date.now() > user.resetCodeExpiration) {
+            return res.status(400).json({ message: 'Invalid or expired reset code' });
+        }
+
+        res.status(200).json({ message: 'Reset code verified' });
+    } catch (error) {
+        console.error('Error verifying reset code:', error);
+        res.status(500).json({ message: 'Error verifying reset code', error: error.message });
     }
-
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
-    await user.save();
-
-    res.status(200).json({ message: 'Password reset successfully' });
-  } catch (error) {
-    console.error('Error resetting password:', error);
-    res.status(500).json({ message: 'Error resetting password', error: error.message });
-  }
 }));
 
+// Reset password
+router.post('/resetPassword', asyncHandler(async (req, res) => {
+    const { email, resetCode, newPassword } = req.body;
 
+    try {
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: 'User does not exist in database' });
+        }
 
-// Update a variant type
-router.put('/updatePassword ', asyncHandler(async (req, res) => {
-    const { email, oldPassword, newPassword } = req.body;
+        if (user.resetCode !== resetCode || Date.now() > user.resetCodeExpiration) {
+            return res.status(400).json({ message: 'Invalid or expired reset code' });
+        }
 
-  try {
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(404).json({ message: 'User does not exist in database' });
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        user.password = hashedPassword;
+        user.resetCode = undefined;
+        user.resetCodeExpiration = undefined;
+        await user.save();
+
+        res.status(200).json({ message: 'Password reset successfully' });
+    } catch (error) {
+        console.error('Error resetting password:', error);
+        res.status(500).json({ message: 'Error resetting password', error: error.message });
     }
-
-    const isMatch = await bcrypt.compare(oldPassword, user.password);
-    if (!isMatch) {
-      return res.status(400).json({ message: 'Incorrect old password' });
-    }
-
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    user.password = hashedPassword;
-    await user.save();
-
-    res.status(200).json({ message: 'Password updated successfully' });
-  } catch (error) {
-    console.error('Error updating password:', error);
-    res.status(500).json({ message: 'Error updating password', error: error.message });
-  }
 }));
-
-
 
 module.exports = router;
