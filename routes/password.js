@@ -15,7 +15,7 @@ const transporter = nodemailer.createTransport({
     debug: false,
     secureConnection: false,
     auth: {
-        user: process.env.AROBISCA_EMAIL, // Use environment variables for sensitive info
+        user: process.env.AROBISCA_EMAIL,
         pass: process.env.AROBISCA_EMAIL_PASSWORD,
     },
     tls: {
@@ -38,7 +38,7 @@ router.post('/requestPasswordReset', asyncHandler(async (req, res) => {
             return res.status(404).json({ message: 'User does not exist in database' });
         }
 
-        console.log(user);
+        console.log(Date.now());
 
         const resetCode = generateRandomCode();
         const expirationTime = Date.now() + 3600000; // 1 hour from now
@@ -66,6 +66,8 @@ router.post('/requestPasswordReset', asyncHandler(async (req, res) => {
 router.post('/verifyResetCode', asyncHandler(async (req, res) => {
     const { email, resetCode } = req.body;
 
+    console.log(resetCode);
+
     try {
         const user = await User.findOne({ email });
         if (!user) {
@@ -82,7 +84,7 @@ router.post('/verifyResetCode', asyncHandler(async (req, res) => {
         res.status(500).json({ message: 'Error verifying reset code', error: error.message });
     }
 }));
-
+ 
 // Reset password
 router.post('/resetPassword', asyncHandler(async (req, res) => {
     const { email, resetCode, newPassword } = req.body;
