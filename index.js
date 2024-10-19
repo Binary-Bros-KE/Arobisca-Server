@@ -35,6 +35,7 @@ app.use('/orders', require('./routes/order'));
 app.use('/payment', require('./routes/payment'));
 app.use('/notification', require('./routes/notification'));
 app.use('/mpesa', require('./routes/mpesa'));
+app.use('/kopokopo', require('./routes/kopokopo'));
 app.use('/password', require('./routes/password'));
 
 
