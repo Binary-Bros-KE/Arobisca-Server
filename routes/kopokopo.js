@@ -24,7 +24,7 @@ const generateKopoKopoToken = async (req, res, next) => {
     }
 };
 
-router.get((req, res) => {
+router.get('/', (req, res) => {
     res.json({ success: true, message: 'Kopo Kopo route working Succesfully', data: null });
 });
 
