@@ -2,38 +2,38 @@ const express = require('express');
 const asyncHandler = require('express-async-handler');
 const axios = require('axios');
 const router = express.Router();
-
-const generateKopoKopoToken = async (req, res, next) => {
-
-//Having stored your credentials as environment variables
-const options = {
+const K2 = require("k2-connect-node")({
     clientId: process.env.K2_CLIENT_ID,
     clientSecret: process.env.K2_CLIENT_SECRET,
     baseUrl: 'https://sandbox.kopokopo.com',
     apiKey: process.env.K2_API_KEY
-}
+});
 
-//Including the kopokopo module
-var K2 = require("k2-connect-node")(options)
+// Separate TokenService initialization for better readability
+const { TokenService } = K2;
 
+// Middleware to generate the KopoKopo token
+const generateKopoKopoToken = asyncHandler(async (req, res, next) => {
+    try {
+        // Retrieve token from TokenService
+        const response = await TokenService.getToken();
+        req.kopokopoToken = response.access_token; // Attach token to request
+        console.log("Access token retrieved successfully.");
+        next(); // Proceed to the next middleware/handler
+    } catch (error) {
+        console.error("Error generating token:", error.message);
+        next(error); // Pass error to global error handler
+    }
+});
 
-// TOKEN
-const TokenService = K2.TokenService
-
-TokenService
-    .getToken()
-    .then(response => {
-        //Developer can decide to store the token_details and track expiry
-        console.log("Access token is: " + response.access_token)
-    })
-    .catch(error => {
-        console.log(error)
-    })
-};
-
-
+// Route for handling STK initialization
 router.post('/stk', generateKopoKopoToken, asyncHandler(async (req, res) => {
-    res.json({ success: true, message: 'Stk Route Initialised', data: null });
+    res.json({
+        success: true,
+        message: 'STK Route Initialized',
+        accessToken: req.kopokopoToken
+    });
 }));
 
 module.exports = router;
+
