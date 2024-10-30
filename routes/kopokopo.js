@@ -40,7 +40,25 @@ const generateKopoKopoToken = asyncHandler(async (req, res, next) => {
 
 // Route for handling STK initialization
 router.post('/stk', generateKopoKopoToken, asyncHandler(async (req, res) => {
-    const { phone, amount } = req.body;
+    let { phone, amount } = req.body;
+
+    if (/^0\d{9}$/.test(phone)) {
+        phone = phone.replace(/^0/, "+254");
+    } else if (!phone.startsWith("+254")) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid phone number format. Please provide a valid Kenyan phone number starting with 07 or +254."
+        });
+    }
+
+    // Validate amount
+    if (!amount || isNaN(amount) || amount <= 0) {
+        return res.status(400).json({
+            success: false,
+            message: "Invalid amount. Please provide a positive number."
+        });
+    }
+
     const stkOptions = {
         paymentChannel: "M-PESA STK Push",
         tillNumber: '8200506',
@@ -50,6 +68,7 @@ router.post('/stk', generateKopoKopoToken, asyncHandler(async (req, res) => {
         callbackUrl: process.env.CALLBACK_URL,
         accessToken: req.kopokopoToken,
     };
+
     try {
         const response = await StkService.initiateIncomingPayment(stkOptions);
         res.json({
@@ -66,6 +85,7 @@ router.post('/stk', generateKopoKopoToken, asyncHandler(async (req, res) => {
         });
     }
 }));
+
 
 // Handle KopoKopo callback result
 router.post('/result', asyncHandler(async (req, res) => {
