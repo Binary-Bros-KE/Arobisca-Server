@@ -62,7 +62,7 @@ router.post('/result', asyncHandler(async (req, res) => {
 
         console.log("Received callback data:", JSON.stringify(callbackData, null, 2));
 
-        if (callbackData.event.resource.status === 'Received') {
+        if (callbackData.data.attributes.event.resource.status === 'Received') {
             const paymentStatus = callbackData.resource.status;
             const transactionId = callbackData.resource.resourceId;
             const paymentAmount = callbackData.resource.amount;
