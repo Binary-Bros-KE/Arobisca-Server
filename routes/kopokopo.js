@@ -70,10 +70,11 @@ router.post('/stk', generateKopoKopoToken, asyncHandler(async (req, res) => {
 
 // Handle KopoKopo callback result
 router.post('/result', asyncHandler(async (req, res) => {
-    try {
-        console.log("Received callback data:", JSON.stringify(callbackData, null, 2));
-        
+    try {        
         const callbackData = req.body.data;
+
+        console.log("Received callback data:", JSON.stringify(callbackData, null, 2));
+
         const transactionId = callbackData.id;
         const status = callbackData.attributes.status;
         const event = callbackData.attributes.event;
