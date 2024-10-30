@@ -1,6 +1,5 @@
 const express = require('express');
 const asyncHandler = require('express-async-handler');
-const axios = require('axios');
 const router = express.Router();
 const K2 = require("k2-connect-node")({
     clientId: process.env.K2_CLIENT_ID,
@@ -10,13 +9,14 @@ const K2 = require("k2-connect-node")({
 });
 
 //TokenService initialization
-const { TokenService, StkService, Webhooks } = K2;
+const { TokenService, StkService } = K2;
+
 
 // Middleware to generate the KopoKopo token
 const generateKopoKopoToken = asyncHandler(async (req, res, next) => {
     try {
         const response = await TokenService.getToken();
-        req.kopokopoToken = response.access_token; // Attach token to request
+        req.kopokopoToken = response.access_token;
         console.log("Access token retrieved successfully.");
         next();
     } catch (error) {
@@ -58,27 +58,21 @@ router.post('/stk', generateKopoKopoToken, asyncHandler(async (req, res) => {
 // Handle KopoKopo callback result
 router.post('/result', asyncHandler(async (req, res) => {
     try {
-        // Capture the callback data
         const callbackData = req.body;
 
         console.log("Received callback data:", JSON.stringify(callbackData, null, 2));
 
-        // Perform actions based on the callback data, such as logging, updating DB, etc.
-        // Here we can check the status of the payment
-        if (callbackData.event_type === 'payment_received') {
+        if (callbackData.event.resource.status === 'Received') {
             const paymentStatus = callbackData.resource.status;
             const transactionId = callbackData.resource.resourceId;
             const paymentAmount = callbackData.resource.amount;
             const phoneNumber = callbackData.resource.senderPhoneNumber;
 
-            // Log or store the information as needed
             console.log(`Payment received from ${phoneNumber}:`);
             console.log(`Status: ${paymentStatus}, Amount: ${paymentAmount}, Transaction ID: ${transactionId}`);
 
-            // Send response back to KopoKopo
             res.json({ success: true, message: "Callback received successfully" });
         } else {
-            // Handle other types of callbacks if necessary
             console.log("Unhandled event type:", callbackData.event_type);
             res.status(400).json({ success: false, message: "Unhandled event type" });
         }
