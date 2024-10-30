@@ -10,7 +10,7 @@ const transactionSchema = new mongoose.Schema({
     currency: String,
     tillNumber: String,
     system: String,
-    problems: String,
+    problems: Array,
     initiationTime: Date,
 }, { timestamps: true });
 
