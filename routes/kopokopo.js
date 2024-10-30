@@ -1,5 +1,6 @@
 const express = require('express');
 const asyncHandler = require('express-async-handler');
+const Transaction = require('../model/kopokopoModel');
 const router = express.Router();
 const K2 = require("k2-connect-node")({
     clientId: process.env.K2_CLIENT_ID,
@@ -10,6 +11,18 @@ const K2 = require("k2-connect-node")({
 
 //TokenService initialization
 const { TokenService, StkService } = K2;
+
+// WebSocket setup
+const { WebSocketServer } = require('ws');
+const wss = new WebSocketServer({ noServer: true });
+
+function setupWebSocket(server) {
+    server.on('upgrade', (request, socket, head) => {
+        wss.handleUpgrade(request, socket, head, (ws) => {
+            wss.emit('connection', ws, request);
+        });
+    });
+}
 
 
 // Middleware to generate the KopoKopo token
@@ -58,30 +71,50 @@ router.post('/stk', generateKopoKopoToken, asyncHandler(async (req, res) => {
 // Handle KopoKopo callback result
 router.post('/result', asyncHandler(async (req, res) => {
     try {
-        const callbackData = req.body;
+        const callbackData = req.body.data;
+        const transactionId = callbackData.id;
+        const status = callbackData.attributes.status;
+        const event = callbackData.attributes.event;
+        const resource = event.resource;
 
-        console.log("Received callback data:", JSON.stringify(callbackData, null, 2));
+        // Prepare transaction data
+        const transactionData = {
+            transactionId,
+            status,
+            reference: resource ? resource.reference : null,
+            phoneNumber: resource ? resource.sender_phone_number : null,
+            amount: resource ? resource.amount : null,
+            currency: resource ? resource.currency : null,
+            tillNumber: resource ? resource.till_number : null,
+            system: resource ? resource.system : null,
+            problems: event.errors || null,
+            initiationTime: callbackData.attributes.initiation_time,
+        };
 
-    formattedCallback = JSON.stringify(callbackData, null, 2);
+        // Save transaction to the database
+        const transaction = new Transaction(transactionData);
+        await transaction.save();
 
-        if (formattedCallback.data.attributes.event.resource.status === 'Received') {
-            const paymentStatus = callbackData.resource.status;
-            const transactionId = callbackData.resource.resourceId;
-            const paymentAmount = callbackData.resource.amount;
-            const phoneNumber = callbackData.resource.senderPhoneNumber;
+        // Emit real-time status update to WebSocket clients
+        wss.clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({
+                    transactionId,
+                    status,
+                    message: status === "Success" ? "Payment successful" : "Payment failed",
+                    details: transactionData
+                }));
+            }
+        });
 
-            console.log(`Payment received from ${phoneNumber}:`);
-            console.log(`Status: ${paymentStatus}, Amount: ${paymentAmount}, Transaction ID: ${transactionId}`);
+        console.log("Processed callback and updated WebSocket clients:", transactionData);
+        res.status(200).json({ success: true, message: "Callback processed successfully" });
 
-            res.json({ success: true, message: "Callback received successfully" });
-        } else {
-            console.log("Unhandled event type:", callbackData.event_type);
-            res.status(400).json({ success: false, message: "Unhandled event type" });
-        }
     } catch (error) {
         console.error("Error processing callback:", error.message);
         res.status(500).json({ success: false, message: "Error processing callback", error: error.message });
     }
 }));
 
-module.exports = router;
+module.exports = { router, setupWebSocket };
+
