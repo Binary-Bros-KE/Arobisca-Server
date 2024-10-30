@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Test</title>
+</head>
+<body>
+    <h2>WebSocket Test</h2>
+    <div id="output"></div>
+
+    <script>
+        const ws = new WebSocket('wss://arobisca-server-a1kw.onrender.com'); // Use your WebSocket endpoint here
+
+        ws.onopen = () => {
+            console.log('Connected to WebSocket');
+            document.getElementById('output').innerHTML += '<p>Connected to WebSocket</p>';
+        };
+
+        ws.onmessage = (event) => {
+            console.log('Received:', event.data);
+            document.getElementById('output').innerHTML += `<p>Received: ${event.data}</p>`;
+        };
+
+        ws.onclose = () => {
+            console.log('WebSocket connection closed');
+            document.getElementById('output').innerHTML += '<p>WebSocket connection closed</p>';
+        };
+
+        ws.onerror = (error) => {
+            console.log('WebSocket error:', error);
+            document.getElementById('output').innerHTML += '<p>WebSocket error</p>';
+        };
+    </script>
+</body>
+</html>

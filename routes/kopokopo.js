@@ -50,7 +50,6 @@ router.post('/stk', generateKopoKopoToken, asyncHandler(async (req, res) => {
         callbackUrl: process.env.CALLBACK_URL,
         accessToken: req.kopokopoToken,
     };
-
     try {
         const response = await StkService.initiateIncomingPayment(stkOptions);
         res.json({
@@ -100,7 +99,7 @@ router.post('/result', asyncHandler(async (req, res) => {
 
         // Emit real-time status update to WebSocket clients
         wss.clients.forEach(client => {
-            if (client.readyState === WebSocket.OPEN) {
+            if (client.readyState === client.OPEN) {
                 client.send(JSON.stringify({
                     transactionId,
                     status,
