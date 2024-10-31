@@ -1,4 +1,5 @@
 const express = require('express');
+const axios = require('axios');
 const asyncHandler = require('express-async-handler');
 const Transaction = require('../model/kopokopoModel');
 const router = express.Router();
@@ -137,6 +138,29 @@ router.post('/result', asyncHandler(async (req, res) => {
         res.status(500).json({ success: false, message: "Error processing callback", error: error.message });
     }
 }));
+
+
+
+router.get('/verify/:transactionId', generateKopoKopoToken, async (req, res) => {
+    const { transactionId } = req.params;
+    const locationUrl = `https://sandbox.kopokopo.com/api/v1/incoming_payments/${transactionId}`;
+
+    try {
+        const response = await axios.get(locationUrl, {
+            headers: {
+                Accept: 'application/json',
+                Authorization: `Bearer ${req.kopokopoToken}`,
+            },
+        });
+
+        res.json({
+            success: true,
+            data: response.data,
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Failed to verify with KopoKopo', error: error.message });
+    }
+});
 
 module.exports = { router, setupWebSocket };
 
