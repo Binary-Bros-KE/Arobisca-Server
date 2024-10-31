@@ -73,6 +73,7 @@ router.post('/stk', generateKopoKopoToken, asyncHandler(async (req, res) => {
     try {
         const response = await StkService.initiateIncomingPayment(stkOptions);
 
+        //--------- Get transaction id
         const transactionUrl = response;
         const transactionId = transactionUrl.split('/').pop();
 
