@@ -158,9 +158,42 @@ router.get('/verify/:transactionId', generateKopoKopoToken, async (req, res) => 
             data: response.data,
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Failed to verify with KopoKopo', error: error.message });
+        if (error.response && error.response.status === 404) {
+            // Handle case where the transaction ID doesn't exist
+            res.json({
+                success: true,
+                data: {
+                    data: {
+                        id: transactionId,
+                        type: "incoming_payment",
+                        attributes: {
+                            initiation_time: null,
+                            status: "Pending",
+                            event: {
+                                type: "Incoming Payment Request",
+                                resource: null,
+                                errors: null,
+                            },
+                            metadata: null,
+                            _links: {
+                                callback_url: null,
+                                self: locationUrl,
+                            },
+                        },
+                    },
+                },
+            });
+        } else {
+            // Other errors
+            res.status(500).json({
+                success: false,
+                message: 'Failed to verify with KopoKopo',
+                error: error.message,
+            });
+        }
     }
 });
+
 
 module.exports = { router, setupWebSocket };
 
