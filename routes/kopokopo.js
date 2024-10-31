@@ -72,10 +72,15 @@ router.post('/stk', generateKopoKopoToken, asyncHandler(async (req, res) => {
 
     try {
         const response = await StkService.initiateIncomingPayment(stkOptions);
+
+        const transactionUrl = response;
+        const transactionId = transactionUrl.split('/').pop();
+
         res.json({
             success: true,
             message: "STK Push Initialized",
-            data: response
+            data: response,
+            transactionId: transactionId
         });
     } catch (error) {
         console.error("Error initiating STK push:", error.message);
@@ -86,6 +91,7 @@ router.post('/stk', generateKopoKopoToken, asyncHandler(async (req, res) => {
         });
     }
 }));
+
 
 
 // Handle KopoKopo callback result
