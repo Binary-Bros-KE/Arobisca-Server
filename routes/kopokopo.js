@@ -6,7 +6,7 @@ const router = express.Router();
 const K2 = require("k2-connect-node")({
     clientId: process.env.K2_CLIENT_ID,
     clientSecret: process.env.K2_CLIENT_SECRET,
-    baseUrl: 'https://sandbox.kopokopo.com',
+    baseUrl: process.env.K2_BASE_URL,
     apiKey: process.env.K2_API_KEY
 });
 
@@ -67,21 +67,26 @@ router.post('/stk', generateKopoKopoToken, asyncHandler(async (req, res) => {
         currency: "KES",
         amount: amount,
         callbackUrl: process.env.CALLBACK_URL,
-        accessToken: req.kopokopoToken,
+        // accessToken: req.kopokopoToken,
     };
+
+    const stkPushUrl = `${process.env.KOPOKOPO_BASE_URL}incoming_payments/`;
 
     try {
         const response = await StkService.initiateIncomingPayment(stkOptions);
 
+        console.log(response);
+
         //--------- Get transaction id
-        const transactionUrl = response;
-        const transactionId = transactionUrl.split('/').pop();
+        // const transactionUrl = response;
+        // const transactionId = transactionUrl.split('/').pop();
 
         res.json({
             success: true,
             message: "STK Push Initialized",
             data: response,
-            transactionId: transactionId
+            accessToken: req.kopokopoToken,
+            // transactionId: transactionId
         });
     } catch (error) {
         console.error("Error initiating STK push:", error.message);
