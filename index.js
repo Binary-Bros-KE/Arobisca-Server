@@ -12,6 +12,7 @@ const server = http.createServer(app);
 const { setupWebSocket } = require('./routes/kopokopo'); 
 setupWebSocket(server);
 
+
 //Middle wair
 app.use(cors({ origin: '*' }))
 app.use(bodyParser.json());

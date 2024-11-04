@@ -3,15 +3,22 @@ const axios = require('axios');
 const asyncHandler = require('express-async-handler');
 const Transaction = require('../model/kopokopoModel');
 const router = express.Router();
-const K2 = require("k2-connect-node")({
+const K2_token = require("k2-connect-node")({
     clientId: process.env.K2_CLIENT_ID,
     clientSecret: process.env.K2_CLIENT_SECRET,
-    baseUrl: process.env.K2_BASE_URL,
+    baseUrl: process.env.K2_BASE_URL_TOKEN,
+    apiKey: process.env.K2_API_KEY
+});
+const K2_stk = require("k2-connect-node")({
+    clientId: process.env.K2_CLIENT_ID,
+    clientSecret: process.env.K2_CLIENT_SECRET,
+    baseUrl: process.env.K2_BASE_URL_STK,
     apiKey: process.env.K2_API_KEY
 });
 
 //TokenService initialization
-const { TokenService, StkService } = K2;
+const { TokenService } = K2_token;
+const { StkService } = K2_stk;
 
 // WebSocket setup
 const { WebSocketServer } = require('ws');
@@ -34,7 +41,7 @@ const generateKopoKopoToken = asyncHandler(async (req, res, next) => {
         console.log("Access token retrieved successfully.");
         next();
     } catch (error) {
-        console.error("Error generating token:", error.message);
+        console.error("Error generating token:", error);
         next(error);
     }
 });
@@ -42,7 +49,8 @@ const generateKopoKopoToken = asyncHandler(async (req, res, next) => {
 // Route for handling STK initialization
 router.post('/stk', generateKopoKopoToken, asyncHandler(async (req, res) => {
     let { phone, amount } = req.body;
-
+    
+    // Validate phone
     if (/^0\d{9}$/.test(phone)) {
         phone = phone.replace(/^0/, "+254");
     } else if (!phone.startsWith("+254")) {
@@ -62,31 +70,30 @@ router.post('/stk', generateKopoKopoToken, asyncHandler(async (req, res) => {
 
     const stkOptions = {
         paymentChannel: "M-PESA STK Push",
-        tillNumber: '8200506',
+        tillNumber: process.env.K2_TILL_NO,
         phoneNumber: phone,
         currency: "KES",
         amount: amount,
         callbackUrl: process.env.CALLBACK_URL,
-        // accessToken: req.kopokopoToken,
+        accessToken: req.kopokopoToken,
     };
 
-    const stkPushUrl = `${process.env.KOPOKOPO_BASE_URL}incoming_payments/`;
 
     try {
         const response = await StkService.initiateIncomingPayment(stkOptions);
 
-        console.log(response);
+        console.log(`STK Response: ${response}`);
 
-        //--------- Get transaction id
-        // const transactionUrl = response;
-        // const transactionId = transactionUrl.split('/').pop();
+        // --------- Get transaction id
+        const transactionUrl = response;
+        const transactionId = transactionUrl.split('/').pop();
 
         res.json({
             success: true,
             message: "STK Push Initialized",
             data: response,
             accessToken: req.kopokopoToken,
-            // transactionId: transactionId
+            transactionId: transactionId
         });
     } catch (error) {
         console.error("Error initiating STK push:", error.message);
@@ -102,7 +109,7 @@ router.post('/stk', generateKopoKopoToken, asyncHandler(async (req, res) => {
 
 // Handle KopoKopo callback result
 router.post('/result', asyncHandler(async (req, res) => {
-    try {        
+    try {
         const callbackData = req.body.data;
 
         console.log("Received callback data:", JSON.stringify(callbackData, null, 2));
@@ -208,4 +215,6 @@ router.get('/verify/:transactionId', generateKopoKopoToken, async (req, res) => 
 
 
 module.exports = { router, setupWebSocket };
+
+
 
