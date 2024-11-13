@@ -80,7 +80,7 @@ router.post('/stk', generateKopoKopoToken, asyncHandler(async (req, res) => {
 
 
     try {
-        const response = await StkService.initiateIncomingPayment(stkOptions);
+        const response = await StkService.initiateIncomingPayment({ stkOptions });
 
         console.log(`STK Response: ${response}`);
 

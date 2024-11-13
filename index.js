@@ -9,13 +9,12 @@ dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
-const { setupWebSocket } = require('./routes/kopokopo'); 
-setupWebSocket(server);
 
 
 //Middle wair
 app.use(cors({ origin: '*' }))
 app.use(bodyParser.json());
+
 // setting static folder path
 app.use('/image/products', express.static('public/products'));
 app.use('/image/category', express.static('public/category'));
@@ -41,7 +40,6 @@ app.use('/orders', require('./routes/order'));
 app.use('/payment', require('./routes/payment'));
 app.use('/notification', require('./routes/notification'));
 app.use('/mpesa', require('./routes/mpesa'));
-app.use('/kopokopo', require('./routes/kopokopo').router);
 app.use('/password', require('./routes/password'));
 
 
