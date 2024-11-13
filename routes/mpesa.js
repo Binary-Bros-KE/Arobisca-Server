@@ -8,7 +8,9 @@ const generateToken = async (req, res, next) => {
     const secretKey = process.env.MPESA_CONSUMER_SECRET;
     const consumerKey = process.env.MPESA_CONSUMER_KEY;
     const auth = Buffer.from(`${consumerKey}:${secretKey}`).toString("base64");
-    const authUrl = process.env.MPESA_AUTH_URL;
+
+    const environmentAuthUrl = process.env.MPESA_AUTH_URL
+    const authUrl = `${environmentAuthUrl}?grant_type=client_credentials`;
 
     try {
         const response = await axios.get(authUrl, {
@@ -17,7 +19,8 @@ const generateToken = async (req, res, next) => {
             }
         });
         req.token = response.data.access_token;
-        console.log(token);
+        const token = response.data.access_token;
+        console.log(`Token retrived Successfully: ${token}`);
         next();
     } catch (err) {
         console.error('Error generating token:', err.message);
@@ -41,13 +44,15 @@ router.post('/stk', generateToken, asyncHandler(async (req, res) => {
 
     const date = new Date();
     const timestamp = date.getFullYear() + 
-    ("0" + (date.getMoth() + 1)).slice(-2) + 
+    ("0" + (date.getMonth() + 1)).slice(-2) + 
     ("0" + date.getDate()).slice(-2) + 
     ("0" + date.getHours()).slice(-2) +
     ("0" + date.getMinutes()).slice(-2) +
     ("0" + date.getSeconds()).slice(-2)
 
     const password = new Buffer.from(shortcode + passkey + timestamp).toString("base64")
+
+    console.log(reqUrl);
 
 
     try {
@@ -78,7 +83,14 @@ router.post('/stk', generateToken, asyncHandler(async (req, res) => {
 
 router.post("/result", (req, res)=>{
     const callbackData = req.body;
-    console.log(callbackData);
+    console.log(callbackData.body);
+
+    if(!callbackData.body.CallbackMetadata){
+        console.log(callbackData.body);
+        return res.json("ok");
+    }
+
+    console.log(callbackData.body.CallbackMetadata);
 })
 
 module.exports = router;
