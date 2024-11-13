@@ -34,21 +34,34 @@ router.get('/token', generateToken, asyncHandler(async (req, res) => {
 router.post('/stk', generateToken, asyncHandler(async (req, res) => {
     const { phone, amount } = req.body;
     const formattedPhone = phone.substring(1);
+
+    const passkey = process.env.MPESA_PASSKEY;
     const shortcode = process.env.MPESA_SHORTCODE;
     const reqUrl = process.env.MPESA_STK_PUSH_URL;
+
+    const date = new Date();
+    const timestamp = date.getFullYear() + 
+    ("0" + (date.getMoth() + 1)).slice(-2) + 
+    ("0" + date.getDate()).slice(-2) + 
+    ("0" + date.getHours()).slice(-2) +
+    ("0" + date.getMinutes()).slice(-2) +
+    ("0" + date.getSeconds()).slice(-2)
+
+    const password = new Buffer.from(shortcode + passkey + timestamp).toString("base64")
+
 
     try {
         const response = await axios.post(reqUrl, {    
             "BusinessShortCode": shortcode,    
-            "Password": "MTc0Mzc5YmZiMjc5ZjlhYTliZGJjZjE1OGU5N2RkNzFhNDY3Y2QyZTBjODkzMDU5YjEwZjc4ZTZiNzJhZGExZWQyYzkxOTIwMTYwMjE2MTY1NjI3",    
-            "Timestamp":"20160216165627",    
-            "TransactionType": "CustomerPayBillOnline",
+            "Password": password,    
+            "Timestamp": timestamp,    
+            "TransactionType": "CustomerBuyGoodsOnline",
             "Amount": amount,    
             "PartyA":`254${formattedPhone}`,    
             "PartyB": shortcode,    
             "PhoneNumber":`254${formattedPhone}`,    
             "CallBackURL": process.env.MPESA_CALLBACK_URL,
-            "AccountReference":"AROBISCA GROUP",    
+            "AccountReference":"AROBISCA GROUP LIMITED",    
             "TransactionDesc":"Test"
          },
         {
@@ -63,7 +76,7 @@ router.post('/stk', generateToken, asyncHandler(async (req, res) => {
     }
 }));
 
-router.post("/callback", (req, res)=>{
+router.post("/result", (req, res)=>{
     const callbackData = req.body;
     console.log(callbackData);
 })
