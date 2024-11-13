@@ -83,14 +83,14 @@ router.post('/stk', generateToken, asyncHandler(async (req, res) => {
 
 router.post("/result", (req, res)=>{
     const callbackData = req.body;
-    console.log(`Call back Data ${callbackData}`);
+    console.log(`Call back Data ${callbackData.Body}`);
 
-    if(!callbackData.body.CallbackMetadata){
+    if(!callbackData.Body.CallbackMetadata){
         console.log(callbackData.body);
         return res.json("ok");
     }
 
-    console.log(callbackData.body.CallbackMetadata);
+    console.log(callbackData.Body.CallbackMetadata);
 })
 
 module.exports = router;
