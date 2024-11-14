@@ -1,40 +1,50 @@
-const express = require('express');
-const asyncHandler = require('express-async-handler');
-const axios = require('axios');
+const express = require("express");
+const asyncHandler = require("express-async-handler");
+const Payment = require("../model/mpesaModel");
+const axios = require("axios");
 const router = express.Router();
 
 // Middleware to generate token
 const generateToken = async (req, res, next) => {
-    const secretKey = process.env.MPESA_CONSUMER_SECRET;
-    const consumerKey = process.env.MPESA_CONSUMER_KEY;
-    const auth = Buffer.from(`${consumerKey}:${secretKey}`).toString("base64");
+  const secretKey = process.env.MPESA_CONSUMER_SECRET;
+  const consumerKey = process.env.MPESA_CONSUMER_KEY;
+  const auth = Buffer.from(`${consumerKey}:${secretKey}`).toString("base64");
 
-    const environmentAuthUrl = process.env.MPESA_AUTH_URL
-    const authUrl = `${environmentAuthUrl}?grant_type=client_credentials`;
+  const environmentAuthUrl = process.env.MPESA_AUTH_URL;
+  const authUrl = `${environmentAuthUrl}?grant_type=client_credentials`;
 
-    try {
-        const response = await axios.get(authUrl, {
-            headers: {
-                Authorization: `Basic ${auth}`
-            }
-        });
-        req.token = response.data.access_token;
-        const token = response.data.access_token;
-        console.log(`Token retrived Successfully: ${token}`);
-        next();
-    } catch (err) {
-        console.error('Error generating token:', err.message);
-        res.status(400).json({ error: 'Failed to generate token', details: err.message });
-    }
+  try {
+    const response = await axios.get(authUrl, {
+      headers: {
+        Authorization: `Basic ${auth}`,
+      },
+    });
+    req.token = response.data.access_token;
+    const token = response.data.access_token;
+    console.log(`Token retrived Successfully: ${token}`);
+    next();
+  } catch (err) {
+    console.error("Error generating token:", err.message);
+    res
+      .status(400)
+      .json({ error: "Failed to generate token", details: err.message });
+  }
 };
 
 // Test route to get token
-router.get('/token', generateToken, asyncHandler(async (req, res) => {
+router.get(
+  "/token",
+  generateToken,
+  asyncHandler(async (req, res) => {
     res.json({ token: req.token });
-}));
+  })
+);
 
 // Send STK Push Request
-router.post('/stk', generateToken, asyncHandler(async (req, res) => {
+router.post(
+  "/stk",
+  generateToken,
+  asyncHandler(async (req, res) => {
     const { phone, amount } = req.body;
     const formattedPhone = phone.substring(1);
 
@@ -43,54 +53,103 @@ router.post('/stk', generateToken, asyncHandler(async (req, res) => {
     const reqUrl = process.env.MPESA_STK_PUSH_URL;
 
     const date = new Date();
-    const timestamp = date.getFullYear() + 
-    ("0" + (date.getMonth() + 1)).slice(-2) + 
-    ("0" + date.getDate()).slice(-2) + 
-    ("0" + date.getHours()).slice(-2) +
-    ("0" + date.getMinutes()).slice(-2) +
-    ("0" + date.getSeconds()).slice(-2)
+    const timestamp =
+      date.getFullYear() +
+      ("0" + (date.getMonth() + 1)).slice(-2) +
+      ("0" + date.getDate()).slice(-2) +
+      ("0" + date.getHours()).slice(-2) +
+      ("0" + date.getMinutes()).slice(-2) +
+      ("0" + date.getSeconds()).slice(-2);
 
-    const password = new Buffer.from(shortcode + passkey + timestamp).toString("base64")
-
-    console.log(reqUrl);
-
+    const password = new Buffer.from(shortcode + passkey + timestamp).toString(
+      "base64"
+    );
 
     try {
-        const response = await axios.post(reqUrl, {    
-            "BusinessShortCode": shortcode,    
-            "Password": password,    
-            "Timestamp": timestamp,    
-            "TransactionType": "CustomerBuyGoodsOnline",
-            "Amount": amount,    
-            "PartyA":`254${formattedPhone}`,    
-            "PartyB": shortcode,    
-            "PhoneNumber":`254${formattedPhone}`,    
-            "CallBackURL": process.env.MPESA_CALLBACK_URL,
-            "AccountReference":"AROBISCA GROUP LIMITED",    
-            "TransactionDesc":"Test"
-         },
+      const response = await axios.post(
+        reqUrl,
         {
-            headers: {
-                Authorization: `Bearer ${req.token}`
-            }
-        });
-        res.status(200).json(response.data);
+          BusinessShortCode: shortcode,
+          Password: password,
+          Timestamp: timestamp,
+          TransactionType: "CustomerBuyGoodsOnline",
+          Amount: amount,
+          PartyA: `254${formattedPhone}`,
+          PartyB: process.env.AROBISCA_MPESA_TILLNUMBER,
+          PhoneNumber: `254${formattedPhone}`,
+          CallBackURL: process.env.MPESA_CALLBACK_URL,
+          AccountReference: "AROBISCA GROUP LIMITED",
+          TransactionDesc: "Test",
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${req.token}`,
+          },
+        }
+      );
+      res.status(200).json(response.data);
     } catch (err) {
-        console.error('STK push error:', err.message);
-        res.status(400).json({ error: 'Failed to initiate STK push', details: err });
+      console.error("STK push error:", err.message);
+      res
+        .status(400)
+        .json({ error: "Failed to initiate STK push", details: err });
     }
-}));
+  })
+);
 
-router.post("/result", (req, res)=>{
-    const callbackData = req.body;
-    console.log(`Call back Data ${callbackData.Body}`);
+router.post("/result", (req, res) => {
+  const callbackData = req.body;
+  const stkCallback = callbackData.Body.stkCallback;
+  const resultCode = stkCallback.ResultCode;
+  let responseMessage;
 
-    if(!callbackData.Body.CallbackMetadata){
-        console.log(callbackData.body);
-        return res.json("ok");
-    }
+  console.log("  ")
+  console.log(callbackData);
+  console.log("  ")
 
-    console.log(callbackData.Body.CallbackMetadata);
-})
+  if (resultCode === 0) {
+    console.log("The service request is processed successfully.");
+    
+    // Successful payment
+    const metadata = stkCallback.CallbackMetadata.Item;
+    const transactionData = {
+      phone: metadata.find((item) => item.Name === "PhoneNumber")?.Value,
+      amount: metadata.find((item) => item.Name === "Amount")?.Value,
+      transactionId: metadata.find((item) => item.Name === "MpesaReceiptNumber")
+        ?.Value,
+    };
+
+    const payment = new Payment(transactionData);
+
+    payment
+      .save()
+      .then((data) => {
+        console.log({ Message: "Saved successfully", data });
+        res.json("ok");
+      })
+      .catch((err) => {
+        console.error("Error saving payment:", err.message);
+        res.status(500).json({ error: "Failed to save payment data" });
+      });
+
+    responseMessage = { status: "success", data: transactionData };
+  } else if (resultCode === 1032) {
+    console.log("Request cancelled by user.")
+    // User cancelled the STK push
+    responseMessage = {
+      status: "cancelled",
+      message: "Request cancelled by user.",
+    };
+  } else if (resultCode === 2001) {
+    console.log("The initiator information is invalid.")
+    // Incorrect M-PESA PIN
+    responseMessage = {
+      status: "failed",
+      message: "The initiator information is invalid.",
+    };
+  }
+});
+
+module.exports = router;
 
 module.exports = router;

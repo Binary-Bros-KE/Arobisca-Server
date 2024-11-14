@@ -5,14 +5,23 @@ const mongoose = require('mongoose');
 const asyncHandler = require('express-async-handler');
 const dotenv = require('dotenv');
 const http = require('http');
+const { Server } = require('socket.io'); // Import socket.io
+
 dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
 
+// Initialize socket.io and attach it to the server
+const io = new Server(server, {
+    cors: {
+        origin: "*",
+        methods: ["GET", "POST"]
+    }
+});
 
-//Middle wair
-app.use(cors({ origin: '*' }))
+// Middleware
+app.use(cors({ origin: '*' }));
 app.use(bodyParser.json());
 
 // setting static folder path
@@ -42,7 +51,6 @@ app.use('/notification', require('./routes/notification'));
 app.use('/mpesa', require('./routes/mpesa'));
 app.use('/password', require('./routes/password'));
 
-
 // Example route using asyncHandler directly in app.js
 app.get('/', asyncHandler(async (req, res) => {
     res.json({ success: true, message: 'API working successfully', data: null });
@@ -53,9 +61,24 @@ app.use((error, req, res, next) => {
     res.status(500).json({ success: false, message: error.message, data: null });
 });
 
+// Socket.io connection event
+io.on('connection', (socket) => {
+    console.log('Client connected:', socket.id);
 
+    socket.on('join', (room) => {
+        socket.join(room);
+        console.log(`Client ${socket.id} joined room ${room}`);
+    });
+
+    socket.on('disconnect', () => {
+        console.log(`Client ${socket.id} disconnected`);
+    });
+});
+
+// Start the server
 server.listen(process.env.PORT, () => {
     console.log(`Server running on port ${process.env.PORT}`);
 });
 
-
+// Export io to use in other files (e.g., for emitting events in routes)
+module.exports = { io };
