@@ -3,34 +3,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WebSocket Test</title>
+    <title>MPESA STK Push Test</title>
 </head>
 <body>
-    <h2>WebSocket Test</h2>
-    <div id="output"></div>
+    <h1>MPESA STK Push Initiation</h1>
+    
+    <form id="stk-form">
+        <label for="phone">Phone Number (e.g., 254701234567):</label>
+        <input type="text" id="phone" name="phone" required>
+        <br>
+        <label for="amount">Amount:</label>
+        <input type="number" id="amount" name="amount" required>
+        <br>
+        <button type="submit">Initiate STK Push</button>
+    </form>
+
+    <h2>Status:</h2>
+    <div id="status">Waiting for response...</div>
+
+    <h3>Messages:</h3>
+    <div id="messages"></div>
 
     <script>
-        const ws = new WebSocket('wss://arobisca-server-a1kw.onrender.com'); 
+        const form = document.getElementById("stk-form");
+        const statusDiv = document.getElementById("status");
+        const messagesDiv = document.getElementById("messages");
 
-        ws.onopen = () => {
-            console.log('Connected to WebSocket');
-            document.getElementById('output').innerHTML += '<p>Connected to WebSocket</p>';
-        };
+        let checkoutRequestId = null;  // This will hold the CheckoutRequestID from the STK response
 
-        ws.onmessage = (event) => {
-            console.log('Received:', event.data);
-            document.getElementById('output').innerHTML += `<p>Received: ${event.data}</p>`;
-        };
+        // WebSocket connection
+        let socket = null;
 
-        ws.onclose = () => {
-            console.log('WebSocket connection closed');
-            document.getElementById('output').innerHTML += '<p>WebSocket connection closed</p>';
-        };
+        // Handle form submission and initiate STK push
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const phone = document.getElementById("phone").value;
+            const amount = document.getElementById("amount").value;
 
-        ws.onerror = (error) => {
-            console.log('WebSocket error:', error);
-            document.getElementById('output').innerHTML += '<p>WebSocket error</p>';
-        };
+            // Send STK push request to the server
+            try {
+                const response = await fetch("http://localhost:3000/mpesa/stk", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        phone: phone,
+                        amount: amount,
+                    }),
+                });
+
+                const result = await response.json();
+                console.log(result);
+
+                if (response.ok) {
+                    statusDiv.textContent = `STK Push initiated successfully! CheckoutRequestID: ${result.CheckoutRequestID}`;
+
+                    // Store CheckoutRequestID and initiate WebSocket connection
+                    checkoutRequestId = result.CheckoutRequestID;
+
+                    // Now connect WebSocket with the CheckoutRequestID
+                    socket = new WebSocket("ws://localhost:3000");
+
+                    socket.addEventListener("open", () => {
+                        console.log("Connected to WebSocket server");
+
+                        // Send CheckoutRequestID to the server after WebSocket is open
+                        socket.send(JSON.stringify({ action: "register", checkoutRequestId }));
+                    });
+
+                    socket.addEventListener("message", (event) => {
+                        console.log("Received message:", event.data);
+                        const messageElement = document.createElement("div");
+                        messageElement.textContent = "Message from server: " + event.data;
+                        messagesDiv.appendChild(messageElement);
+                    });
+
+                    socket.addEventListener("close", () => {
+                        console.log("WebSocket connection closed");
+                    });
+
+                    socket.addEventListener("error", (error) => {
+                        console.error("WebSocket error:", error);
+                    });
+
+                } else {
+                    statusDiv.textContent = `Error: ${result.error || 'Unknown error'}`;
+                }
+            } catch (error) {
+                console.error("Error initiating STK Push:", error);
+                statusDiv.textContent = "Error initiating STK Push.";
+            }
+        });
     </script>
 </body>
 </html>

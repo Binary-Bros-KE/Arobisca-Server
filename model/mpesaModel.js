@@ -3,7 +3,7 @@ const { Schema } = mongoose;
 
 const paymentSchema = new Schema(
     {
-        number: {
+        phone: {
             type: String,
             required: true,
         },
