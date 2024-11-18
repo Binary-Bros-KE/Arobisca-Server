@@ -62,8 +62,7 @@ router.post("/stk", generateToken, asyncHandler(async (req, res) => {
       PartyA: `254${formattedPhone}`,
       PartyB: process.env.AROBISCA_MPESA_TILLNUMBER,
       PhoneNumber: `254${formattedPhone}`,
-      // CallBackURL: callbackURL,
-      CallBackURL: 'https://d807-102-0-8-98.ngrok-free.app/mpesa/result',
+      CallBackURL: callbackURL,
       AccountReference: "AROBISCA GROUP LIMITED",
       TransactionDesc: "Test",
     }
