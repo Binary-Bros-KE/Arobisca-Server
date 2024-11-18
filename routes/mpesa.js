@@ -53,27 +53,28 @@ router.post("/stk", generateToken, asyncHandler(async (req, res) => {
       "base64"
     );
 
+    const reqBody = {
+      BusinessShortCode: shortcode,
+      Password: password,
+      Timestamp: timestamp,
+      TransactionType: "CustomerBuyGoodsOnline",
+      Amount: amount,
+      PartyA: `254${formattedPhone}`,
+      PartyB: process.env.AROBISCA_MPESA_TILLNUMBER,
+      PhoneNumber: `254${formattedPhone}`,
+      // CallBackURL: callbackURL,
+      CallBackURL: 'https://d807-102-0-8-98.ngrok-free.app/mpesa/result',
+      AccountReference: "AROBISCA GROUP LIMITED",
+      TransactionDesc: "Test",
+    }
+
     try {
-      const response = await axios.post(
-        reqUrl,
-        {
-          BusinessShortCode: shortcode,
-          Password: password,
-          Timestamp: timestamp,
-          TransactionType: "CustomerBuyGoodsOnline",
-          Amount: amount,
-          PartyA: `254${formattedPhone}`,
-          PartyB: process.env.AROBISCA_MPESA_TILLNUMBER,
-          PhoneNumber: `254${formattedPhone}`,
-          CallBackURL: callbackURL,
-          AccountReference: "AROBISCA GROUP LIMITED",
-          TransactionDesc: "Test",
-        },
+      const response = await axios.post( reqUrl,reqBody,
         {
           headers: {
             Authorization: `Bearer ${req.token}`,
           },
-        }
+        },
       );
 
       // Return the unique identifiers with the response
@@ -124,6 +125,9 @@ router.post("/result", (req, res) => {
       .then(() => console.log("Payment saved successfully"))
       .catch((err) => console.error("Error saving payment:", err.message));
 
+  } else if (resultCode === 1) {
+    console.log("Balance is insufficient for the transaction", stkCallback);
+    message = { status: "insufficient", message: "Balance is insufficient for the transaction" };
   } else if (resultCode === 1032) {
     console.log("Request cancelled by user", stkCallback);
     message = { status: "cancelled", message: "Request cancelled by user" };
@@ -196,7 +200,10 @@ router.post("/paymentStatus", generateToken, asyncHandler(async (req, res) => {
     if (resultCode === 0) {
       console.log("Payment was successful - preparing to broadcast");
       message = { status: "success", message: "Payment was successful",};
-    } else if (resultCode === 1032) {
+    }else if (resultCode === 1) {
+      console.log("Balance is insufficient for the transaction", stkCallback);
+      message = { status: "insufficient", message: "Balance is insufficient for the transaction" };
+     } else if (resultCode === 1032) {
       console.log("Request was cancelled by user");
       message = { status: "cancelled", message: "Request cancelled by user" };
     } else if (resultCode === 2001) {

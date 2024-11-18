@@ -29,13 +29,13 @@ router.post('/login', async (req, res) => {
       // Find user by email
       const user = await User.findOne({ email });
       if (!user) {
-        return res.status(400).json({ message: 'User Does not exist in database' });
+        return res.status(400).json({ message: 'User Does not exist in database. Please Create an Acoount to Login' });
       }
   
       // Compare password
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
-        return res.status(400).json({ message: 'You entered the wrong password' });
+        return res.status(400).json({ message: 'You entered the wrong password. Check Password and try again.' });
       }
   
       // Generate JWT
