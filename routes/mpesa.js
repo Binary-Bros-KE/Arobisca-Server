@@ -90,12 +90,12 @@ router.post("/stk", generateToken, asyncHandler(async (req, res) => {
 
 //---------------- Result routes
 // Results posted on callback
-router.post("/result", (req, res) => {
+router.post("/resultcghbnsjsxhHJSM", (req, res) => {
   const callbackData = req.body;
   const stkCallback = callbackData.Body.stkCallback;
   const resultCode = stkCallback.ResultCode;
 
-  const checkoutRequestId = stkCallback.CheckoutRequestID; // Use this as the unique identifier
+  const checkoutRequestId = stkCallback.CheckoutRequestID; 
 
   console.log("M-PESA Callback Received", stkCallback);
   console.log("Result Code:", resultCode);
@@ -125,8 +125,8 @@ router.post("/result", (req, res) => {
       .catch((err) => console.error("Error saving payment:", err.message));
 
   } else if (resultCode === 1) {
-    console.log("Balance is insufficient for the transaction", stkCallback);
-    message = { status: "insufficient", message: "Balance is insufficient for the transaction" };
+    console.log("Balance is insufficient for the transaction. Please top up and try again.", stkCallback);
+    message = { status: "insufficient", message: "Balance is insufficient for the transaction. Please top up and try again." };
   } else if (resultCode === 1032) {
     console.log("Request cancelled by user", stkCallback);
     message = { status: "cancelled", message: "Request cancelled by user" };
@@ -200,8 +200,8 @@ router.post("/paymentStatus", generateToken, asyncHandler(async (req, res) => {
       console.log("Payment was successful - preparing to broadcast");
       message = { status: "success", message: "Payment was successful",};
     }else if (resultCode === 1) {
-      console.log("Balance is insufficient for the transaction", stkCallback);
-      message = { status: "insufficient", message: "Balance is insufficient for the transaction" };
+      console.log("Balance is insufficient for the transaction. Please top up and try again.", stkCallback);
+      message = { status: "insufficient", message: "Balance is insufficient for the transaction. Please top up and try again." };
      } else if (resultCode === 1032) {
       console.log("Request was cancelled by user");
       message = { status: "cancelled", message: "Request cancelled by user" };
