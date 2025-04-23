@@ -44,6 +44,12 @@ app.use('/notification', require('./routes/notification'));
 app.use('/mpesa', require('./routes/mpesa'));
 app.use('/password', require('./routes/password'));
 
+//------- PLAYBOX :)
+app.use('/playbox_mpesa', require('./routes/playbox_mpesa'));
+app.use('/playbox_order', require('./routes/playbox_order'));
+app.use('/playbox_products', require('./routes/playbox_products'));
+app.use('/playbox_user', require('./routes/playbox_user'));
+
 // Example route
 app.get('/', asyncHandler(async (req, res) => {
     res.json({ success: true, message: 'API working successfully', data: null });
