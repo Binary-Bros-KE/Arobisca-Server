@@ -1,6 +1,6 @@
 const express = require("express");
 const asyncHandler = require("express-async-handler");
-const Payment = require("../models/mpesa");
+const Payment = require("../model/plaboxMpesaModel");
 const axios = require("axios");
 const router = express.Router();
 const { clients } = require('../sockets/websocketState');

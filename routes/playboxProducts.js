@@ -1,7 +1,7 @@
 const express = require('express');
 const asyncHandler = require('express-async-handler');
 const router = express.Router();
-const Products = require('../models/products');
+const Products = require('../model/plaboxProductsModel');
 
 // Get all products
 router.get('/', asyncHandler(async (req, res) => {
