@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const playboxDb = require('../../config/playboxDb');
 const { Schema } = mongoose;
 
 const paymentSchema = new Schema(
@@ -23,7 +24,6 @@ const paymentSchema = new Schema(
 );
 
 // Only define the model if it doesn't already exist
-const MpesaTransaction =
-  mongoose.models.MpesaTransaction || mongoose.model('MpesaTransaction', paymentSchema);
+const MpesaTransaction = playboxDb.models.MpesaTransaction || playboxDb.model('MpesaTransaction', paymentSchema);
 
 module.exports = MpesaTransaction;

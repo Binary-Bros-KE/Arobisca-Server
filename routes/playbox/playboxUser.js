@@ -1,7 +1,7 @@
 const express = require('express');
 const asyncHandler = require('express-async-handler');
 const router = express.Router();
-const User = require('../model/plaboxUserModel');
+const User = require('../../model/playbox/plaboxUserModel');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const secret = process.env.JWT_SECRET;
@@ -29,24 +29,42 @@ router.post('/login', async (req, res) => {
     // Find user by email
     const user = await User.findOne({ email });
     if (!user) {
-      return res.status(400).json({ message: 'User Does not exist in database. Please Create an Acoount to Login' });
+      return res.status(400).json({ message: 'User does not exist in database. Please create an account to login.' });
     }
 
     // Compare password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: 'You entered the wrong password. Check Password and try again.' });
+      return res.status(400).json({ message: 'You entered the wrong password. Check password and try again.' });
     }
 
-    // Generate JWT
-    const token = jwt.sign({ userId: user._id }, secret, { expiresIn: '1h' });
+    // Set token expiry
+    const expiresIn = rememberMe ? '7d' : '3d';
+    const token = jwt.sign({ userId: user._id }, secret, { expiresIn });
 
-    res.status(200).json({ success: true, message: "Login successful.", data: user, token });
+    res.status(200).json({
+      success: true,
+      message: 'Login successful.',
+      data: {
+        id: user._id,
+        username: user.username,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+        avatar: user.avatar,
+        cart: user.cart,
+        favorites: user.favorites,
+        verified: user.verified,
+        token,
+        expiresIn,
+      },
+    });
+
   } catch (error) {
-    console.error('Error during login:', error); // Detailed logging
+    console.error('Error during login:', error);
     res.status(500).json({ message: 'Error logging in', error: error.message });
   }
 });
+
 
 
 // Get a user by ID
@@ -88,9 +106,9 @@ router.post('/register', async (req, res) => {
       email,
       phoneNumber: phone,
       password: hashedPassword,
-      avatar: avatar || '',
-      cart: cart || [], // Default to empty array if no cart data is provided
-      favorites: favorites || [], // Default to empty array if no favorites data is provided
+      avatar: avatar || 'https://res.cloudinary.com/dnrlt7lhe/image/upload/v1745656618/playbox_ngofr5.png',
+      cart: cart || [], 
+      favorites: favorites || [],
     });
 
     await newUser.save();
@@ -99,7 +117,7 @@ router.post('/register', async (req, res) => {
     const token = jwt.sign(
       { id: newUser._id, username: newUser.username },
       process.env.JWT_SECRET,
-      { expiresIn: '30d' }
+      { expiresIn: '3d' }
     );
 
     // Send back user info and token
@@ -114,8 +132,9 @@ router.post('/register', async (req, res) => {
         avatar: newUser.avatar,
         cart: newUser.cart,
         favorites: newUser.favorites,
-        verified: newUser.verified, // Send back verification status
+        verified: newUser.verified,
         token,
+        expiresIn: "3d",
       },
     });
   } catch (error) {

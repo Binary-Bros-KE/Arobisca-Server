@@ -45,10 +45,11 @@ app.use('/mpesa', require('./routes/mpesa'));
 app.use('/password', require('./routes/password'));
 
 //------- PLAYBOX :)
-app.use('/playbox_mpesa', require('./routes/playboxMpesa'));
-app.use('/playbox_order', require('./routes/playboxOrder'));
-app.use('/playbox_products', require('./routes/playboxProducts'));
-app.use('/playbox_user', require('./routes/playboxUser'));
+app.use('/playbox_mpesa', require('./routes/playbox/playboxMpesa'));
+app.use('/playbox_order', require('./routes/playbox/playboxOrder'));
+app.use('/playbox_products', require('./routes/playbox/playboxProducts'));
+app.use('/playbox_user', require('./routes/playbox/playboxUser'));
+app.use('/playbox_password', require('./routes/playbox/playboxPassword'));
 
 // Example route
 app.get('/', asyncHandler(async (req, res) => {

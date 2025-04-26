@@ -1,9 +1,9 @@
 const express = require("express");
 const asyncHandler = require("express-async-handler");
-const Payment = require("../model/plaboxMpesaModel");
+const Payment = require("../../model/playbox/plaboxMpesaModel");
 const axios = require("axios");
 const router = express.Router();
-const { clients } = require('../sockets/websocketState');
+const { clients } = require('../../sockets/websocketState');
 
 // Middleware to generate token
 const generateToken = async (req, res, next) => {

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const playboxDb = require('../../config/playboxDb');
 
 const userSchema = new mongoose.Schema(
   {
@@ -27,6 +28,14 @@ const userSchema = new mongoose.Schema(
       required: true,
       minlength: 6,
     },
+    resetCode: {
+      type: String,
+      required: false
+    },
+    resetCodeExpiration: {
+      type: Date,
+      required: false
+    },
     avatar: {
       type: String,
       default: '',
@@ -49,8 +58,7 @@ const userSchema = new mongoose.Schema(
 
 
 // Only define the model if it doesn't already exist
-const MpesaTransaction =
-  mongoose.models.User || mongoose.model('User', userSchema);
+const MpesaTransaction = playboxDb.models.User || playboxDb.model('User', userSchema);
 
 module.exports = MpesaTransaction;
 

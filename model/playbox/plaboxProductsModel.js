@@ -1,5 +1,6 @@
 
 const mongoose = require('mongoose');
+const playboxDb = require('../../config/playboxDb');
 
 const ProductSchema = new mongoose.Schema({
     platform: String,
@@ -37,6 +38,6 @@ const ProductSchema = new mongoose.Schema({
     rating: String,
 }, { timestamps: true });
 
-const Products = mongoose.model('Products', ProductSchema);
+const Products = playboxDb.model('Products', ProductSchema);
 
 module.exports = Products;
