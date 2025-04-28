@@ -49,7 +49,7 @@ router.post('/login', async (req, res) => {
         id: user._id,
         username: user.username,
         email: user.email,
-        phoneNumber: user.phoneNumber,
+        phone: user.phoneNumber,
         avatar: user.avatar,
         cart: user.cart,
         favorites: user.favorites,
@@ -65,17 +65,18 @@ router.post('/login', async (req, res) => {
   }
 });
 
-
-
-// Get a user by ID
-router.get('/:id', asyncHandler(async (req, res) => {
+// Get a user by Email
+router.post('/user', asyncHandler(async (req, res) => {
   try {
-    const userID = req.params.id;
-    const user = await User.findById(userID);
+    const { email } = req.body;
+
+    let user = await User.findOne({ email });
+
     if (!user) {
-      return res.status(404).json({ success: false, message: "User not found." });
+      return res.status(200).json({ success: true, statusCode: 299, message: "User not found in Database." });
     }
-    res.json({ success: true, message: "User retrieved successfully.", data: user });
+
+    res.json({ success: true, statusCode: 200, message: "User retrieved successfully.", data: user });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -107,7 +108,7 @@ router.post('/register', async (req, res) => {
       phoneNumber: phone,
       password: hashedPassword,
       avatar: avatar || 'https://res.cloudinary.com/dnrlt7lhe/image/upload/v1745656618/playbox_ngofr5.png',
-      cart: cart || [], 
+      cart: cart || [],
       favorites: favorites || [],
     });
 
@@ -128,7 +129,7 @@ router.post('/register', async (req, res) => {
         id: newUser._id,
         username: newUser.username,
         email: newUser.email,
-        phoneNumber: newUser.phoneNumber,
+        phone: newUser.phoneNumber,
         avatar: newUser.avatar,
         cart: newUser.cart,
         favorites: newUser.favorites,

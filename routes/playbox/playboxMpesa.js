@@ -32,59 +32,59 @@ const generateToken = async (req, res, next) => {
 
 // Send STK Push Request
 router.post("/stk", generateToken, asyncHandler(async (req, res) => {
-    const { phone, amount } = req.body;
-    const formattedPhone = phone.substring(1);
+  const { phone, amount } = req.body;
+  const formattedPhone = phone.substring(1);
 
-    const passkey = process.env.PLAYBOX_MPESA_PASSKEY;
-    const shortcode = process.env.PLAYBOX_MPESA_SHORTCODE;
-    const reqUrl = process.env.PLAYBOX_MPESA_STK_PUSH_URL;
-    const callbackURL = process.env.PLAYBOX_MPESA_CALLBACK_URL;
+  const passkey = process.env.PLAYBOX_MPESA_PASSKEY;
+  const shortcode = process.env.PLAYBOX_MPESA_SHORTCODE;
+  const reqUrl = process.env.PLAYBOX_MPESA_STK_PUSH_URL;
+  const callbackURL = process.env.PLAYBOX_MPESA_CALLBACK_URL;
 
-    const date = new Date();
-    const timestamp =
-      date.getFullYear() +
-      ("0" + (date.getMonth() + 1)).slice(-2) +
-      ("0" + date.getDate()).slice(-2) +
-      ("0" + date.getHours()).slice(-2) +
-      ("0" + date.getMinutes()).slice(-2) +
-      ("0" + date.getSeconds()).slice(-2);
+  const date = new Date();
+  const timestamp =
+    date.getFullYear() +
+    ("0" + (date.getMonth() + 1)).slice(-2) +
+    ("0" + date.getDate()).slice(-2) +
+    ("0" + date.getHours()).slice(-2) +
+    ("0" + date.getMinutes()).slice(-2) +
+    ("0" + date.getSeconds()).slice(-2);
 
-    const password = new Buffer.from(shortcode + passkey + timestamp).toString(
-      "base64"
+  const password = new Buffer.from(shortcode + passkey + timestamp).toString(
+    "base64"
+  );
+
+  const reqBody = {
+    BusinessShortCode: shortcode,
+    Password: password,
+    Timestamp: timestamp,
+    TransactionType: "CustomerBuyGoodsOnline",
+    Amount: amount,
+    PartyA: `254${formattedPhone}`,
+    PartyB: process.env.PLAYBOX_AROBISCA_MPESA_TILLNUMBER,
+    PhoneNumber: `254${formattedPhone}`,
+    CallBackURL: callbackURL,
+    AccountReference: "AROBISCA GROUP LIMITED",
+    TransactionDesc: "Test",
+  }
+
+  try {
+    const response = await axios.post(reqUrl, reqBody,
+      {
+        headers: {
+          Authorization: `Bearer ${req.token}`,
+        },
+      },
     );
 
-    const reqBody = {
-      BusinessShortCode: shortcode,
-      Password: password,
-      Timestamp: timestamp,
-      TransactionType: "CustomerBuyGoodsOnline",
-      Amount: amount,
-      PartyA: `254${formattedPhone}`,
-      PartyB: process.env.PLAYBOX_AROBISCA_MPESA_TILLNUMBER,
-      PhoneNumber: `254${formattedPhone}`,
-      CallBackURL: callbackURL,
-      AccountReference: "AROBISCA GROUP LIMITED",
-      TransactionDesc: "Test",
-    }
-
-    try {
-      const response = await axios.post( reqUrl,reqBody,
-        {
-          headers: {
-            Authorization: `Bearer ${req.token}`,
-          },
-        },
-      );
-
-      // Return the unique identifiers with the response
-      res.status(200).json(response.data);
-    } catch (err) {
-      console.error("STK push error:", err.message);
-      res
-        .status(400)
-        .json({ error: "Failed to initiate STK push", details: err.message });
-    }
-  })
+    // Return the unique identifiers with the response
+    res.status(200).json(response.data);
+  } catch (err) {
+    console.error("STK push error:", err.message);
+    res
+      .status(400)
+      .json({ error: "Failed to initiate STK push", details: err.message });
+  }
+})
 );
 
 
@@ -95,7 +95,7 @@ router.post("/resultcghbnsjsxhHJSM", (req, res) => {
   const stkCallback = callbackData.Body.stkCallback;
   const resultCode = stkCallback.ResultCode;
 
-  const checkoutRequestId = stkCallback.CheckoutRequestID; 
+  const checkoutRequestId = stkCallback.CheckoutRequestID;
 
   let message = { status: "unknown" };
 
@@ -103,6 +103,7 @@ router.post("/resultcghbnsjsxhHJSM", (req, res) => {
     console.log("Payment successful - preparing to broadcast");
 
     const metadata = stkCallback.CallbackMetadata.Item;
+    console.log('metadata', metadata)
     const transactionData = {
       phone: metadata.find((item) => item.Name === "PhoneNumber")?.Value,
       amount: metadata.find((item) => item.Name === "Amount")?.Value,
@@ -130,7 +131,7 @@ router.post("/resultcghbnsjsxhHJSM", (req, res) => {
   } else if (resultCode === 2001) {
     console.log("The initiator information is invalid", stkCallback);
     message = { status: "failed", message: "The initiator information is invalid. Please check your PIN and try again" };
-  }else if (resultCode === 1037) {
+  } else if (resultCode === 1037) {
     console.log("DS timeout user cannot be reached", stkCallback);
     message = { status: "timedout", message: "DS Timeout. Please initiate again and respond Quicker" };
   }
@@ -163,67 +164,68 @@ router.post("/paymentStatus", generateToken, asyncHandler(async (req, res) => {
     ("0" + date.getMinutes()).slice(-2) +
     ("0" + date.getSeconds()).slice(-2);
 
-    
-    const password = new Buffer.from(shortcode + passkey + timestamp).toString(
-      "base64"
-    );
 
-    const requestBody = {
-      BusinessShortCode: shortcode,
-      Password: password,
-      Timestamp: timestamp,
-      CheckoutRequestID: CheckoutRequestId,
-    };
+  const password = new Buffer.from(shortcode + passkey + timestamp).toString(
+    "base64"
+  );
 
-    const statusCheckURL = process.env.PLAYBOX_MPESA_STATUS_CHECK_URL;
+  const requestBody = {
+    BusinessShortCode: shortcode,
+    Password: password,
+    Timestamp: timestamp,
+    CheckoutRequestID: CheckoutRequestId,
+  };
+
+  const statusCheckURL = process.env.PLAYBOX_MPESA_STATUS_CHECK_URL;
 
 
-    try {
-      const response = await axios.post(statusCheckURL, requestBody,
-        {
-          headers: {
-            Authorization: `Bearer ${req.token}`,
-            "Content-Type" : "application/json",
-          },
-        }
-      )
+  try {
+    const response = await axios.post(statusCheckURL, requestBody,
+      {
+        headers: {
+          Authorization: `Bearer ${req.token}`,
+          "Content-Type": "application/json",
+        },
+      }
+    )
+
+    console.log(response.data);
 
     const resultCode = parseInt(response.data.ResultCode, 10);
-    console.log(resultCode);
 
     let message = { status: "unknown" };
 
     if (resultCode === 0) {
       console.log("Payment was successful - preparing to broadcast");
-      message = { status: "success", message: "Payment was successful",};
-    }else if (resultCode === 1) {
+      message = { status: "success", message: "Payment was successful", };
+    } else if (resultCode === 1) {
       console.log("Balance is insufficient for the transaction. Please top up and try again.", stkCallback);
       message = { status: "insufficient", message: "Balance is insufficient for the transaction. Please top up and try again." };
-     } else if (resultCode === 1032) {
+    } else if (resultCode === 1032) {
       console.log("Request was cancelled by user");
       message = { status: "cancelled", message: "Request cancelled by user" };
     } else if (resultCode === 2001) {
       console.log("The initiator information was invalid. Please check your PIN and try again");
       message = { status: "failed", message: "The initiator information was invalid. Please check your PIN and try again" };
-    }else if (resultCode === 1037) {
+    } else if (resultCode === 1037) {
       console.log("DS timeout user was not reached");
       message = { status: "timedout", message: "DS timeout user cannot be reached" };
     }
-  
+
     console.log("Broadcasting message:", { CheckoutRequestId, ...message });
-  
+
     const client = clients.get(CheckoutRequestId);
 
     if (client && client.readyState === client.OPEN) {
       client.send(JSON.stringify({ ...message }));
       console.log(`Message sent to client with CheckoutRequestID: ${CheckoutRequestId}`);
     }
-  
+
     res.status(200).json(response.data);
-    }catch (err) {
-      console.error("Status check error:", err.message);
-      res.status(400).json({ error: "Failed to check Payment status", details: err.message });
-    }
+  } catch (err) {
+    console.error("Status check error:", err.message);
+    res.status(400).json({ error: "Failed to check Payment status", details: err.message });
+  }
 
 }))
 
