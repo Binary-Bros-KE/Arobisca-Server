@@ -94,10 +94,11 @@ router.post('/', asyncHandler(async (req, res) => {
     const order = await Order.create({
         userId: user._id,
         products: items.map(item => ({
-            category: item.category,
-            productId: item.productId,
-            color: item.color,
-            quantity: item.quantity
+            imgUrl: item.selectedImage,
+            name: item.Title,
+            color: item.color || item.defaultColor,
+            price: item.nowPrice,
+            quantity: item.quantity,
         })),
         paymentMethod,
         shippingMethod,

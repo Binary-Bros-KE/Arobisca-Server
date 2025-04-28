@@ -2,9 +2,10 @@ const mongoose = require('mongoose');
 const playboxDb = require('../../config/playboxDb');
 
 const productSchema = new mongoose.Schema({
-    category: { type: String },
-    productId: { type: String },
+    imgUrl: { type: String },
+    name: { type: String },
     color: { type: String },
+    price: { type: Number },
     quantity: { type: Number },
 });
 
