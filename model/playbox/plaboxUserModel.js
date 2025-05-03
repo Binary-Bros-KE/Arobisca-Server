@@ -86,6 +86,10 @@ const userSchema = new mongoose.Schema({
     type: Boolean,
     default: false, // Set to false by default, will require email verification
   },
+  newsUpdates: {
+    type: Boolean,
+    default: false, // Set to false by default, will require email verification
+  },
 },
   { timestamps: true });
 

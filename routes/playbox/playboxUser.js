@@ -184,4 +184,185 @@ router.delete('/:id', asyncHandler(async (req, res) => {
   }
 }));
 
+
+//----------- Add a new address (shipping or billing)
+router.post('/address', async (req, res) => {
+  try {
+    const { email, addressType, addressData } = req.body;
+
+    if (!email || !addressType || !addressData) {
+      return res.status(400).json({
+        statusCode: 400,
+        message: 'Missing required fields',
+      });
+    }
+
+    if (addressType !== 'shipping' && addressType !== 'billing') {
+      return res.status(400).json({
+        statusCode: 400,
+        message: 'Invalid address type',
+      });
+    }
+
+    // Find the user
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        statusCode: 404,
+        message: 'User not found',
+      });
+    }
+
+    // Add the address to the appropriate array
+    if (addressType === 'shipping') {
+      user.shippingAddresses.push(addressData);
+    } else {
+      user.billingAddresses.push(addressData);
+    }
+
+    await user.save();
+
+    return res.status(200).json({
+      statusCode: 200,
+      message: 'Address added successfully',
+      data: user,
+    });
+  } catch (error) {
+    console.error('Error adding address:', error);
+    return res.status(500).json({
+      statusCode: 500,
+      message: 'Server error',
+      error: error.message,
+    });
+  }
+});
+
+
+
+// Update an existing address
+router.put('/address/:addressId', async (req, res) => {
+  try {
+    const { email, addressType, addressData } = req.body;
+    const { addressId } = req.params;
+
+    if (!email || !addressType || !addressData || !addressId) {
+      return res.status(400).json({
+        statusCode: 400,
+        message: 'Missing required fields',
+      });
+    }
+
+    if (addressType !== 'shipping' && addressType !== 'billing') {
+      return res.status(400).json({
+        statusCode: 400,
+        message: 'Invalid address type',
+      });
+    }
+
+    // Find the user
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        statusCode: 404,
+        message: 'User not found',
+      });
+    }
+
+    // Find and update the address
+    const addressArray = addressType === 'shipping' ? user.shippingAddresses : user.billingAddresses;
+    const addressIndex = addressArray.findIndex(addr => addr._id.toString() === addressId);
+
+    if (addressIndex === -1) {
+      return res.status(404).json({
+        statusCode: 404,
+        message: 'Address not found',
+      });
+    }
+
+    // Update the address fields
+    addressArray[addressIndex] = {
+      ...addressArray[addressIndex].toObject(),
+      ...addressData,
+      _id: addressArray[addressIndex]._id, // Keep the original ID
+    };
+
+    await user.save();
+
+    return res.status(200).json({
+      statusCode: 200,
+      message: 'Address updated successfully',
+      data: user,
+    });
+  } catch (error) {
+    console.error('Error updating address:', error);
+    return res.status(500).json({
+      statusCode: 500,
+      message: 'Server error',
+      error: error.message,
+    });
+  }
+});
+
+
+// Delete an address
+router.delete('/address/:addressId', async (req, res) => {
+  try {
+    const { email, addressType } = req.body;
+    const { addressId } = req.params;
+
+    if (!email || !addressType || !addressId) {
+      return res.status(400).json({
+        statusCode: 400,
+        message: 'Missing required fields',
+      });
+    }
+
+    if (addressType !== 'shipping' && addressType !== 'billing') {
+      return res.status(400).json({
+        statusCode: 400,
+        message: 'Invalid address type',
+      });
+    }
+
+    // Find the user
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        statusCode: 404,
+        message: 'User not found',
+      });
+    }
+
+    // Find and remove the address
+    const addressArray = addressType === 'shipping' ? 'shippingAddresses' : 'billingAddresses';
+
+    // Use MongoDB's $pull operator to remove the address by ID
+    const result = await User.findByIdAndUpdate(
+      user._id,
+      { $pull: { [addressArray]: { _id: addressId } } },
+      { new: true } // Return the updated document
+    );
+
+    if (!result) {
+      return res.status(404).json({
+        statusCode: 404,
+        message: 'Failed to delete address',
+      });
+    }
+
+    return res.status(200).json({
+      statusCode: 200,
+      message: 'Address deleted successfully',
+      data: result,
+    });
+  } catch (error) {
+    console.error('Error deleting address:', error);
+    return res.status(500).json({
+      statusCode: 500,
+      message: 'Server error',
+      error: error.message,
+    });
+  }
+});
+
 module.exports = router;

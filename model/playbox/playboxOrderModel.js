@@ -33,10 +33,11 @@ const orderSchema = new mongoose.Schema({
     },
     products: [productSchema],
     paymentMethod: { type: String },
+    specialDeliveryNote: { type: String },
     transactionData: transactionSchema,
     shippingAddress: addressSchema,
     billingAddress: addressSchema,
-    total: { type: Number },
+    total: { type: Number },   
     orderStatus: {
         type: String,
         enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],

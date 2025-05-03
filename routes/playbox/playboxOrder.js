@@ -4,6 +4,8 @@ const bcrypt = require('bcrypt');
 const Order = require('../../model/playbox/playboxOrderModel');
 const User = require('../../model/playbox/plaboxUserModel');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
+const secret = process.env.JWT_SECRET;
 
 // GET /playbox_order — return all orders (admin)
 router.get('/', asyncHandler(async (req, res) => {
@@ -24,7 +26,25 @@ function calculateLoyalty(total) {
     return 0;
 }
 
-// POST /playbox_order — create a new order
+/* @returns {boolean} - True if addresses match
+ */
+function isSameAddress(addr1, addr2) {
+    // If either is undefined, they can't be the same
+    if (!addr1 || !addr2) return false;
+
+    // Check each field for equality
+    return (
+        addr1.firstName?.toLowerCase() === addr2.firstName?.toLowerCase() &&
+        addr1.lastName?.toLowerCase() === addr2.lastName?.toLowerCase() &&
+        addr1.address?.toLowerCase() === addr2.address?.toLowerCase() &&
+        addr1.apartment?.toLowerCase() === addr2.apartment?.toLowerCase() &&
+        addr1.city?.toLowerCase() === addr2.city?.toLowerCase() &&
+        addr1.postalCode === addr2.postalCode &&
+        addr1.phone === addr2.phone
+    );
+}
+
+// Implementation in your route handler:
 router.post('/', asyncHandler(async (req, res) => {
     const {
         user: userData,
@@ -32,18 +52,19 @@ router.post('/', asyncHandler(async (req, res) => {
         shippingAddress,
         billingAddress,
         shippingMethod,
+        specialDeliveryNote,
         paymentMethod,
+        newsUpdates,
         transactionData,
         total
     } = req.body;
 
-      console.log('Incoming Order Data:', req.body);
+    console.log('Incoming Order Data:', req.body);
+    console.log('newsUpdates:', newsUpdates);
 
     // 1) Find user by email
     const userEmail = userData.email;
     let user = await User.findOne({ email: userEmail });
-
-    // console.log('User from DB:', user);
 
     // 2) If no user found, create one
     if (!user) {
@@ -55,14 +76,15 @@ router.post('/', asyncHandler(async (req, res) => {
             email: userData.email,
             phoneNumber: userData.phone,
             password: hashedPassword,
+            newsUpdates,
             avatar: userData.avatar || 'https://res.cloudinary.com/dnrlt7lhe/image/upload/v1745656618/playbox_ngofr5.png',
             cart: [],
             favorites: [],
+            shippingAddresses: [],
+            billingAddresses: []
         });
-
-        // console.log('New user created:', user);
     } else {
-        // Optional: Update phoneNumber if missing (useful if user record was partial before)
+        // Optional: Update phoneNumber if missing
         if (!user.phoneNumber && userData.phone) {
             user.phoneNumber = userData.phone;
         }
@@ -71,26 +93,35 @@ router.post('/', asyncHandler(async (req, res) => {
     // 3) Award loyalty points
     const pointsEarned = calculateLoyalty(total);
     user.loyaltyPoints = (user.loyaltyPoints || 0) + pointsEarned;
+    user.newsUpdates = newsUpdates;
 
-    // 4) Save shipping and billing addresses
-    user.shippingAddresses = user.shippingAddresses || [];
-    user.billingAddresses = user.billingAddresses || [];
+    // 4) Check and save shipping address if it doesn't exist
+    const shippingAddressExists = user.shippingAddresses.some(existing =>
+        isSameAddress(existing, shippingAddress)
+    );
 
-    function isSameAddress(addr1, addr2) {
-        return JSON.stringify(addr1) === JSON.stringify(addr2);
-    }
-
-    // Before pushing shippingAddress
-    if (!user.shippingAddresses.some(existing => isSameAddress(existing, shippingAddress))) {
+    if (!shippingAddressExists && shippingAddress) {
         user.shippingAddresses.push(shippingAddress);
     }
 
-    // Before pushing billingAddress
-    if (!user.billingAddresses.some(existing => isSameAddress(existing, billingAddress))) {
+    // 5) Check and save billing address if it doesn't exist
+    const billingAddressExists = user.billingAddresses.some(existing =>
+        isSameAddress(existing, billingAddress)
+    );
+
+    if (!billingAddressExists && billingAddress) {
         user.billingAddresses.push(billingAddress);
     }
 
-    // 5) Create the order
+    const expiresIn = '3d';
+    // Generate token
+    const token = jwt.sign(
+        { id: user._id, username: user.username },
+        process.env.JWT_SECRET,
+        { expiresIn }
+    );
+
+    // 6) Create the order
     const order = await Order.create({
         userId: user._id,
         products: items.map(item => ({
@@ -100,6 +131,7 @@ router.post('/', asyncHandler(async (req, res) => {
             price: item.nowPrice,
             quantity: item.quantity,
         })),
+        specialDeliveryNote,
         paymentMethod,
         shippingMethod,
         transactionData: paymentMethod === 'M-Pesa' ? transactionData : undefined,
@@ -110,14 +142,16 @@ router.post('/', asyncHandler(async (req, res) => {
         createdAt: new Date(),
     });
 
+    // Initialize orders array if it doesn't exist
     user.orders = user.orders || [];
     user.orders.push(order._id);
     await user.save();
 
-
     res.status(201).json({
         success: true,
         message: 'Order created successfully',
+        token,
+        expiresIn,
         data: {
             user,
             order,
