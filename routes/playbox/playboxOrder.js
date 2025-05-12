@@ -121,6 +121,9 @@ router.post('/', asyncHandler(async (req, res) => {
         { expiresIn }
     );
 
+    console.log(`expiresIn`, expiresIn);
+    console.log(`token`, token);
+
     // 6) Create the order
     const order = await Order.create({
         userId: user._id,
@@ -150,11 +153,11 @@ router.post('/', asyncHandler(async (req, res) => {
     res.status(201).json({
         success: true,
         message: 'Order created successfully',
-        token,
-        expiresIn,
         data: {
             user,
             order,
+            token,
+            expiresIn,
             loyaltyPointsAwarded: pointsEarned
         }
     });
