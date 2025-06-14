@@ -6,8 +6,6 @@ const asyncHandler = require('express-async-handler');
 const dotenv = require('dotenv');
 const http = require('http');
 const { startWebSocketServer } = require('./sockets/websocketState');
-const Order = require('./model/playbox/playboxOrderModel');
-const sendOrderNotification = require('./utils/sendOrderNotification');
 
 dotenv.config();
 
@@ -60,25 +58,6 @@ app.get('/', asyncHandler(async (req, res) => {
 
 // Start WebSocket server
 const { clients } = startWebSocketServer(server);
-
-const retryFailedOrderEmails = async () => {
-    try {
-        const failedOrders = await Order.find({ emailSent: false });
-        for (const order of failedOrders) {
-            const success = await sendOrderNotification(order);
-            if (success) {
-                order.emailSent = true;
-                await order.save();
-                console.log(`✅ Resent email for order ${order._id}`);
-            }
-        }
-    } catch (err) {
-        console.error("❌ Error retrying failed emails:", err.message);
-    }
-};
-
-// Call this at server startup
-retryFailedOrderEmails();
 
 // Start the server
 server.listen(process.env.PORT, () => {
