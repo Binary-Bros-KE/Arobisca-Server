@@ -8,7 +8,6 @@ const jwt = require('jsonwebtoken');
 
 // Request password reset
 router.post('/requestPasswordReset', asyncHandler(async (req, res) => {
-    console.log('ROUTE HIT');
     const { email } = req.body;
 
     try {

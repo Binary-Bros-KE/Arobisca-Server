@@ -3,6 +3,7 @@ const asyncHandler = require('express-async-handler');
 const bcrypt = require('bcrypt');
 const Order = require('../../model/playbox/playboxOrderModel');
 const User = require('../../model/playbox/plaboxUserModel');
+const sendOrderNotification = require('../../utils/sendOrderNotification');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
 const secret = process.env.JWT_SECRET;
@@ -152,6 +153,13 @@ router.post('/', asyncHandler(async (req, res) => {
     user.orders = user.orders || [];
     user.orders.push(order._id);
     await user.save();
+
+    sendOrderNotification(order).then(async success => {
+    if (success) {
+        order.emailSent = true;
+        await order.save();
+    }
+});
 
     res.status(201).json({
         success: true,

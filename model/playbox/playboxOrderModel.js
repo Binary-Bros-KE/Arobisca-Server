@@ -10,13 +10,13 @@ const productSchema = new mongoose.Schema({
 });
 
 const addressSchema = new mongoose.Schema({
-  firstName: { type: String },
-  lastName: { type: String },
-  address: { type: String },
-  apartment: { type: String },
-  city: { type: String },
-  postalCode: { type: String },
-  phone: { type: String },
+    firstName: { type: String },
+    lastName: { type: String },
+    address: { type: String },
+    apartment: { type: String },
+    city: { type: String },
+    postalCode: { type: String },
+    phone: { type: String },
 });
 
 const transactionSchema = new mongoose.Schema({
@@ -37,7 +37,11 @@ const orderSchema = new mongoose.Schema({
     transactionData: transactionSchema,
     shippingAddress: addressSchema,
     billingAddress: addressSchema,
-    total: { type: Number },   
+    total: { type: Number },
+    emailSent: {
+        type: Boolean,
+        default: false
+    },
     orderStatus: {
         type: String,
         enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled',],
