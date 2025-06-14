@@ -6,15 +6,50 @@ const asyncHandler = require('express-async-handler');
 const dotenv = require('dotenv');
 const http = require('http');
 const { startWebSocketServer } = require('./sockets/websocketState');
+const Order = require('./model/playbox/playboxOrderModel');
+const sendOrderNotification = require('./utils/sendOrderNotification');
 
 dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
 
+
+const retryFailedOrderEmails = async () => {
+    try {
+        const failedOrders = await Order.find({ emailSent: false });
+        for (const order of failedOrders) {
+            const success = await sendOrderNotification(order);
+            if (success) {
+                order.emailSent = true;
+                await order.save();
+                console.log(`✅ Resent email for order ${order._id}`);
+            }
+        }
+    } catch (err) {
+        console.error("❌ Error retrying failed emails:", err.message);
+    }
+};
+
 // Middleware
 app.use(cors({ origin: '*' }));
 app.use(bodyParser.json());
+// GLOBAL MIDDLEWARE — retry on every request
+let lastRetry = 0;
+
+app.use(async (req, res, next) => {
+    const now = Date.now();
+    if (now - lastRetry > 5 * 60 * 1000) { // every 5 minutes max
+        try {
+            await retryFailedOrderEmails();
+            lastRetry = now;
+        } catch (err) {
+            console.error("Retry email middleware error:", err.message);
+        }
+    }
+    next();
+});
+
 
 // Static folders
 app.use('/image/products', express.static('public/products'));
@@ -58,6 +93,7 @@ app.get('/', asyncHandler(async (req, res) => {
 
 // Start WebSocket server
 const { clients } = startWebSocketServer(server);
+
 
 // Start the server
 server.listen(process.env.PORT, () => {
