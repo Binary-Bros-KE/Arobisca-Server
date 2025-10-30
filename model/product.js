@@ -28,14 +28,13 @@ const productSchema = new mongoose.Schema({
         default: null
     },
     images: [{
-        image: {
-            type: Number,
-            required: true
-        },
-        url: {
-            type: String,
-            required: true
-        }
+        image: Number, // 1, 2, 3, 4, 5
+        url: String,
+        publicId: String,
+        width: Number,
+        height: Number,
+        format: String,
+        bytes: Number
     }]
 }, { timestamps: true });
 

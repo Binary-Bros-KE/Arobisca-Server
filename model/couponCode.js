@@ -4,7 +4,9 @@ const couponSchema = new mongoose.Schema({
   couponCode: {
     type: String,
     required: true,
-    unique: true
+    unique: true,
+    trim: true,
+    uppercase: true
   },
   discountType: {
     type: String,
@@ -13,11 +15,13 @@ const couponSchema = new mongoose.Schema({
   },
   discountAmount: {
     type: Number,
-    required: true
+    required: true,
+    min: 0
   },
   minimumPurchaseAmount: {
     type: Number,
-    required: true
+    default: 0,
+    min: 0
   },
   endDate: {
     type: Date,
@@ -30,17 +34,22 @@ const couponSchema = new mongoose.Schema({
   },
   applicableCategory: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Category'
-  },
-  applicableSubCategory: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'SubCategory'
+    ref: 'Category',
+    default: null
   },
   applicableProduct: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Product'
+    ref: 'Product',
+    default: null
   }
-}, { timestamps: true });
+}, { 
+  timestamps: true 
+});
+
+// Add index for better performance
+couponSchema.index({ couponCode: 1 });
+couponSchema.index({ endDate: 1 });
+couponSchema.index({ status: 1 });
 
 const Coupon = mongoose.model('Coupon', couponSchema);
 

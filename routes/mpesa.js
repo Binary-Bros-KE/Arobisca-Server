@@ -91,6 +91,7 @@ router.post("/stk", generateToken, asyncHandler(async (req, res) => {
 //---------------- Result routes
 // Results posted on callback
 router.post("/resultcghbnsjsxhHJSM", (req, res) => {
+  console.log(`CALLBACK HIT`);
   const callbackData = req.body;
   const stkCallback = callbackData.Body.stkCallback;
   const resultCode = stkCallback.ResultCode;

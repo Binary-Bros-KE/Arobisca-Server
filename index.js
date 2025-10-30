@@ -1,15 +1,16 @@
+const dotenv = require('dotenv');
+dotenv.config();
+
 const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const asyncHandler = require('express-async-handler');
-const dotenv = require('dotenv');
 const http = require('http');
 const { startWebSocketServer } = require('./sockets/websocketState');
 const Order = require('./model/playbox/playboxOrderModel');
 const sendOrderNotification = require('./utils/sendOrderNotification');
 
-dotenv.config();
 
 const app = express();
 const server = http.createServer(app);
@@ -61,14 +62,10 @@ const URL = process.env.MONGO_URL;
 mongoose.connect(URL);
 const db = mongoose.connection;
 db.on('error', (error) => console.error(error));
-db.once('open', () => console.log('Connected to Database'));
+db.once('open', () => console.log('☕ Connected to Arobisca Database'));
 
 // Routes
 app.use('/categories', require('./routes/category'));
-app.use('/subCategories', require('./routes/subCategory'));
-app.use('/brands', require('./routes/brand'));
-app.use('/variantTypes', require('./routes/variantType'));
-app.use('/variants', require('./routes/variant'));
 app.use('/products', require('./routes/product'));
 app.use('/couponCodes', require('./routes/couponCode'));
 app.use('/posters', require('./routes/poster'));
@@ -78,6 +75,8 @@ app.use('/payment', require('./routes/payment'));
 app.use('/notification', require('./routes/notification'));
 app.use('/mpesa', require('./routes/mpesa'));
 app.use('/password', require('./routes/password'));
+app.use('/shipping-fees', require('./routes/shippingFees'));
+app.use('/dashboard', require('./routes/dashboard'));
 
 //------- PLAYBOX :)
 app.use('/playbox_mpesa', require('./routes/playbox/playboxMpesa'));
@@ -97,7 +96,7 @@ const { clients } = startWebSocketServer(server);
 
 // Start the server
 server.listen(process.env.PORT, () => {
-    console.log(`Server running on port ${process.env.PORT}`);
+    console.log(`🚀 Server running on port ${process.env.PORT}`);
 });
 
 

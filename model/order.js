@@ -1,10 +1,105 @@
 const mongoose = require('mongoose');
 
+const orderItemSchema = new mongoose.Schema({
+  product: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product',
+    required: true
+  },
+  name: {
+    type: String,
+    required: true
+  },
+  image: {
+    type: String,
+    required: true
+  },
+  price: {
+    type: Number,
+    required: true
+  },
+  quantity: {
+    type: Number,
+    required: true,
+    min: 1
+  },
+  offerPrice: {
+    type: Number
+  }
+});
+
+const addressSchema = new mongoose.Schema({
+  firstName: {
+    type: String,
+    required: true
+  },
+  lastName: {
+    type: String,
+    required: true
+  },
+  email: {
+    type: String,
+    required: false
+  },
+  phone: {
+    type: String,
+    required: false
+  },
+  address: {
+    type: String,
+    required: true
+  },
+  apartment: {
+    type: String
+  },
+  city: {
+    type: String,
+    required: true
+  },
+  postalCode: {
+    type: String
+  }
+});
+
+const couponSchema = new mongoose.Schema({
+  code: {
+    type: String,
+    required: true
+  },
+  discountType: {
+    type: String,
+    enum: ['fixed', 'percentage'],
+    required: true
+  },
+  discountAmount: {
+    type: Number,
+    required: true
+  },
+  appliedDiscount: {
+    type: Number,
+    required: true
+  }
+});
+
+const mpesaTransactionSchema = new mongoose.Schema({
+  phone: String,
+  amount: Number,
+  transactionId: String,
+});
+
 const orderSchema = new mongoose.Schema({
-  userID: {
+  // User information
+  user: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
+  },
+
+  // Order details
+  orderNumber: {
+    type: String,
+    unique: true
+    // Remove required: true since we generate it automatically
   },
   orderDate: {
     type: Date,
@@ -12,63 +107,116 @@ const orderSchema = new mongoose.Schema({
   },
   orderStatus: {
     type: String,
-    enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
+    enum: ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'],
     default: 'pending'
   },
-  items: [
-    {
-      productID: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Product',
-        required: true
-      },
-      productName: {
-        type: String,
-        required: true
-      },
-      quantity: {
-        type: Number,
-        required: true
-      },
-      price: {
-        type: Number,
-        required: true
-      },
-      variant: {
-        type: String,
-      },
-    }
-  ],
-  totalPrice: {
+
+  // Products
+  items: [orderItemSchema],
+
+  // Pricing
+  subtotal: {
     type: Number,
     required: true
   },
-  shippingAddress: {
-    phone: String,
-    street: String,
-    city: String,
-    state: String,
-    postalCode: String,
-    country: String
+  discount: {
+    type: Number,
+    default: 0
+  },
+  shipping: {
+    type: Number,
+    required: true
+  },
+  total: {
+    type: Number,
+    required: true
   },
 
+  // Coupon information
+  coupon: couponSchema,
+
+  // Addresses
+  shippingAddress: addressSchema,
+  billingAddress: addressSchema,
+
+  // Shipping information
+  shippingMethod: {
+    type: String,
+    required: true
+  },
+  deliveryTime: {
+    type: String,
+    required: true
+  },
+  deliveryNote: String,
+
+  // Payment information
   paymentMethod: {
     type: String,
-    enum: ['Cash On Delivery', 'Prepaid - Lipa na M-pesa']
+    enum: ['mpesa', 'cod'],
+    required: true
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'paid', 'failed', 'refunded'],
+    default: 'pending'
   },
 
-  couponCode: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Coupon'
-},
-  orderTotal: {
-    subtotal: Number,
-    discount: Number,
-    total: Number
-  },
-  trackingUrl: {
-    type: String
-  },
+  // M-Pesa transaction details (for paid orders)
+  mpesaTransaction: mpesaTransactionSchema,
+
+  // Admin notes
+  adminNotes: String
+}, {
+  timestamps: true
+});
+
+// Generate order number before saving - FIXED VERSION
+orderSchema.pre('save', async function (next) {
+  // Only generate order number if it doesn't exist
+  if (!this.orderNumber) {
+    try {
+      const date = new Date();
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+
+      // Find the latest order for today
+      const startOfDay = new Date(date.setHours(0, 0, 0, 0));
+      const endOfDay = new Date(date.setHours(23, 59, 59, 999));
+
+      const lastOrder = await this.constructor.findOne({
+        orderDate: { $gte: startOfDay, $lte: endOfDay }
+      }).sort({ orderNumber: -1 });
+
+      let sequence = 1;
+      if (lastOrder && lastOrder.orderNumber) {
+        const lastSequence = parseInt(lastOrder.orderNumber.slice(-4));
+        sequence = lastSequence + 1;
+      }
+
+      this.orderNumber = `ORD-${year}${month}${day}-${String(sequence).padStart(4, '0')}`;
+      console.log('Generated order number:', this.orderNumber);
+    } catch (error) {
+      console.error('Error generating order number:', error);
+      // Fallback order number
+      this.orderNumber = `ORD-${Date.now()}`;
+    }
+  }
+  next();
+});
+
+// Update user's orders when order is saved
+orderSchema.post('save', async function (doc) {
+  try {
+    const User = mongoose.model('User');
+    await User.findByIdAndUpdate(doc.user, {
+      $addToSet: { orders: doc._id }
+    });
+    console.log('Updated user orders reference for user:', doc.user);
+  } catch (error) {
+    console.error('Error updating user orders:', error);
+  }
 });
 
 const Order = mongoose.model('Order', orderSchema);
