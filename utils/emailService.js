@@ -18,7 +18,8 @@ const transporter = nodemailer.createTransport({
 });
 
 // Order confirmation email template
-const generateOrderConfirmationEmail = (order, user, generatedPassword = null) => {
+// Order confirmation email template
+const generateOrderConfirmationEmail = (order, user, generatedPassword = null, accountType = 'personal') => {
     const itemsHTML = order.items.map(item => `
     <tr>
       <td style="padding: 10px; border-bottom: 1px solid #eee;">
@@ -41,13 +42,28 @@ const generateOrderConfirmationEmail = (order, user, generatedPassword = null) =
     </tr>
   ` : '';
 
+    // Enhanced account info with account type
     const accountInfoHTML = generatedPassword ? `
     <div style="background: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px; padding: 15px; margin: 20px 0;">
-      <h4 style="color: #0ea5e9; margin-bottom: 10px;">Your Account Has Been Created!</h4>
+      <h4 style="color: #0ea5e9; margin-bottom: 10px;">Your ${accountType === 'business' ? 'Business ' : ''}Account Has Been Created!</h4>
       <p style="margin: 5px 0;"><strong>Username:</strong> ${user.username}</p>
       <p style="margin: 5px 0;"><strong>Password:</strong> ${generatedPassword}</p>
+      <p style="margin: 5px 0;"><strong>Account Type:</strong> ${accountType === 'business' ? 'Business Account' : 'Personal Account'}</p>
+      ${accountType === 'business' && user.companyName ? `<p style="margin: 5px 0;"><strong>Company:</strong> ${user.companyName}</p>` : ''}
       <p style="margin: 10px 0 0 0; font-size: 14px; color: #666;">
         You can use these credentials to log in and track your orders. We recommend changing your password after first login.
+      </p>
+    </div>
+  ` : '';
+
+    // Credit terms info
+    const creditTermsHTML = order.paymentMethod === 'credit' && order.creditTerms ? `
+    <div style="background: #e0f2fe; border: 1px solid #0284c7; border-radius: 8px; padding: 15px; margin: 15px 0;">
+      <h4 style="color: #0369a1; margin-bottom: 10px;">Credit Purchase Terms</h4>
+      <p style="margin: 5px 0;"><strong>Credit Period:</strong> ${order.creditTerms.creditDays} Days</p>
+      <p style="margin: 5px 0;"><strong>Payment Method:</strong> ${order.creditTerms.paymentMethod.replace('_', ' ').toUpperCase()}</p>
+      <p style="margin: 10px 0 0 0; font-size: 14px; color: #0369a1;">
+        Your order will be processed on credit terms. Please ensure payment is made within ${order.creditTerms.creditDays} days.
       </p>
     </div>
   ` : '';
@@ -83,6 +99,7 @@ const generateOrderConfirmationEmail = (order, user, generatedPassword = null) =
           </div>
 
           ${accountInfoHTML}
+          ${creditTermsHTML}
 
           <div class="order-details">
             <h3 style="color: #d97706; margin-bottom: 15px;">Order Summary</h3>
@@ -116,7 +133,7 @@ const generateOrderConfirmationEmail = (order, user, generatedPassword = null) =
             </p>
             
             <p><strong>Delivery Time:</strong> ${order.deliveryTime}</p>
-            <p><strong>Payment Method:</strong> ${order.paymentMethod === 'mpesa' ? 'M-Pesa' : 'Cash on Delivery'}</p>
+            <p><strong>Payment Method:</strong> ${order.paymentMethod === 'mpesa' ? 'M-Pesa' : order.paymentMethod === 'credit' ? 'Credit Purchase' : 'Cash on Delivery'}</p>
             <p><strong>Payment Status:</strong> ${order.paymentStatus}</p>
             
             ${order.deliveryNote ? `

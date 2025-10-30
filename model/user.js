@@ -23,6 +23,34 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  // New fields for account type and business information
+  accountType: {
+    type: String,
+    enum: ['personal', 'business'],
+    default: 'personal',
+    required: true
+  },
+  companyName: {
+    type: String,
+    required: function() {
+      return this.accountType === 'business';
+    },
+    trim: true
+  },
+  address: {
+    type: String,
+    required: function() {
+      return this.accountType === 'business';
+    },
+    trim: true
+  },
+  kraPin: {
+    type: String,
+    required: function() {
+      return this.accountType === 'business';
+    },
+    trim: true
+  },
   createdAt: {
     type: Date,
     default: Date.now
@@ -84,6 +112,12 @@ const userSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Order'
   }],
+});
+
+// Update the updatedAt field before saving
+userSchema.pre('save', function(next) {
+  this.updatedAt = Date.now();
+  next();
 });
 
 const User = mongoose.model('User', userSchema);

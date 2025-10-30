@@ -28,6 +28,19 @@ const orderItemSchema = new mongoose.Schema({
   }
 });
 
+
+const creditTermsSchema = new mongoose.Schema({
+  creditDays: {
+    type: Number,
+    required: true
+  },
+  paymentMethod: {
+    type: String,
+    enum: ['cheque', 'bank_transfer', 'mpesa', 'cash'],
+    required: true
+  }
+});
+
 const addressSchema = new mongoose.Schema({
   firstName: {
     type: String,
@@ -161,6 +174,21 @@ const orderSchema = new mongoose.Schema({
     enum: ['pending', 'paid', 'failed', 'refunded'],
     default: 'pending'
   },
+
+  // Payment information
+  paymentMethod: {
+    type: String,
+    enum: ['mpesa', 'cod', 'credit'], // Add 'credit' to enum
+    required: true
+  },
+  paymentStatus: {
+    type: String,
+    enum: ['pending', 'paid', 'failed', 'refunded'],
+    default: 'pending'
+  },
+
+  // Credit terms for business purchases
+  creditTerms: creditTermsSchema,
 
   // M-Pesa transaction details (for paid orders)
   mpesaTransaction: mpesaTransactionSchema,

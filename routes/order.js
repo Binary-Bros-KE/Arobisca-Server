@@ -24,22 +24,23 @@ const createUsernameFromEmail = (email) => {
 };
 
 // Helper function to find or create user
-const findOrCreateUser = async (email, phone, firstName, lastName, shippingAddress) => {
+const findOrCreateUser = async (email, phone, firstName, lastName, shippingAddress, accountType = 'personal', businessInfo = null) => {
     let user = await User.findOne({ email });
 
     if (!user) {
-        // Create brand new user
+        // Create brand new user with account type
         const username = createUsernameFromEmail(email);
         const password = generateRandomPassword();
         const hashedPassword = await bcrypt.hash(password, 12);
 
-        user = new User({
+        const userData = {
             username,
             email,
             phoneNumber: phone,
             password: hashedPassword,
             firstName: firstName || username,
             lastName: lastName || 'Customer',
+            accountType: accountType || 'personal',
             isEmailVerified: true,
             shippingAddresses: [
                 {
@@ -51,10 +52,18 @@ const findOrCreateUser = async (email, phone, firstName, lastName, shippingAddre
                     postalCode: shippingAddress.postalCode,
                 },
             ],
-        });
+        };
 
+        // Add business fields if it's a business account
+        if (accountType === 'business' && businessInfo) {
+            userData.companyName = businessInfo.companyName;
+            userData.address = businessInfo.businessAddress;
+            userData.kraPin = businessInfo.kraPin;
+        }
+
+        user = new User(userData);
         await user.save();
-        console.log(`New user created: ${username} with auto-generated password`);
+        console.log(`New ${accountType} user created: ${username} with auto-generated password`);
 
         return { user, generatedPassword: password };
     }
@@ -99,14 +108,28 @@ router.post('/', asyncHandler(async (req, res) => {
             subtotal,
             discount,
             shipping,
-            total
+            total,
+            accountType, // New: account type for guest users
+            businessInfo, // New: business info for guest business users
+            creditTerms // New: credit terms for business credit purchases
         } = req.body;
 
-        console.log(`billingAddress`, billingAddress);
+        console.log(`Order received with payment method: ${paymentMethod}`);
+        console.log(`Account type: ${accountType}`);
+        if (creditTerms) {
+            console.log(`Credit terms:`, creditTerms);
+        }
 
         // Validate required fields
         if (!items || !shippingAddress || !paymentMethod || !total || !shippingMethod) {
             return res.status(400).json({ success: false, message: "Missing required fields." });
+        }
+
+        // Validate credit terms if credit payment is selected
+        if (paymentMethod === 'credit') {
+            if (!creditTerms || !creditTerms.creditDays || !creditTerms.paymentMethod) {
+                return res.status(400).json({ success: false, message: "Credit terms are required for credit purchases." });
+            }
         }
 
         // Get shipping method details to extract deliveryTime
@@ -146,13 +169,15 @@ router.post('/', asyncHandler(async (req, res) => {
                 }
             }
         } else {
-            // Guest checkout - find or create user
+            // Guest checkout - find or create user with account type
             const { user: foundUser, generatedPassword: newPassword } = await findOrCreateUser(
                 shippingAddress.email,
                 shippingAddress.phone,
                 shippingAddress.firstName,
                 shippingAddress.lastName,
-                shippingAddress // pass full shipping address here
+                shippingAddress, // pass full shipping address here
+                accountType, // pass account type
+                businessInfo // pass business info
             );
 
             userObject = foundUser;
@@ -183,28 +208,34 @@ router.post('/', asyncHandler(async (req, res) => {
             paymentStatus: paymentMethod === 'cod' ? 'pending' : 'paid'
         };
 
-
-        console.log(`Mpesa Transactional Data`, transactionData);
-
         // Add M-Pesa transaction data if available
         if (paymentMethod === 'mpesa' && transactionData) {
             orderData.mpesaTransaction = transactionData;
             orderData.paymentStatus = 'paid';
         }
 
+        // Add credit terms if credit payment is selected
+        if (paymentMethod === 'credit') {
+            orderData.creditTerms = creditTerms;
+            orderData.paymentStatus = 'pending'; // Credit payments are pending until paid
+        }
+
+        console.log(`Mpesa Transactional Data`, transactionData);
+
         const order = new Order(orderData);
         const savedOrder = await order.save();
 
         // Populate for email
         const populatedOrder = await Order.findById(savedOrder._id)
-            .populate('user', 'username email firstName lastName')
+            .populate('user', 'username email firstName lastName accountType companyName')
             .populate('items.product', 'name');
 
-        // Send confirmation email
+        // Send confirmation email with account type info
         const emailHtml = generateOrderConfirmationEmail(
             populatedOrder.toObject(),
             userObject,
-            generatedPassword
+            generatedPassword,
+            accountType || userObject.accountType // Pass account type for email template
         );
         await sendEmail(
             userObject.email,
@@ -239,7 +270,7 @@ router.get('/', asyncHandler(async (req, res) => {
         }
 
         const orders = await Order.find(filter)
-            .populate('user', 'name email phoneNumber')
+            .populate('user', 'name email phoneNumber accountType companyName')
             .populate('items.product', 'name images')
             .sort({ orderDate: -1 })
             .limit(limit * 1)

@@ -71,33 +71,90 @@ router.get('/:id', asyncHandler(async (req, res) => {
 
 // Register new user with email verification
 router.post('/register', asyncHandler(async (req, res) => {
-    const { username, email, phoneNumber, password } = req.body;
+    const { username, email, phoneNumber, password, accountType, companyName, address, kraPin } = req.body;
 
-    // Validate input
-    if (!username || !email || !phoneNumber || !password) {
-        return res.status(400).json({ success: false, message: 'All fields are required' });
+    // Validate common required fields
+    if (!email || !phoneNumber || !password || !accountType) {
+        return res.status(400).json({ success: false, message: 'Email, phone number, password, and account type are required' });
+    }
+
+    // Validate account type
+    if (!['personal', 'business'].includes(accountType)) {
+        return res.status(400).json({ success: false, message: 'Invalid account type' });
+    }
+
+    // Validate personal account specific fields
+    if (accountType === 'personal' && !username) {
+        return res.status(400).json({ success: false, message: 'Username is required for personal accounts' });
+    }
+
+    // Validate business account specific fields
+    if (accountType === 'business') {
+        if (!companyName || !address || !kraPin) {
+            return res.status(400).json({ success: false, message: 'Company name, address, and KRA pin are required for business accounts' });
+        }
     }
 
     try {
-        // Check if user already exists
-        const existingUser = await User.findOne({ $or: [{ username }, { email }] });
+        // Generate username for business accounts if not provided
+        let finalUsername = username;
+        if (accountType === 'business' && !username) {
+            // Use company name to generate a username (remove spaces and special chars)
+            finalUsername = companyName
+                .toLowerCase()
+                .replace(/\s+/g, '_')
+                .replace(/[^a-z0-9_]/g, '');
+            
+            // Check if this username already exists and append random numbers if needed
+            let counter = 1;
+            let tempUsername = finalUsername;
+            while (await User.findOne({ username: tempUsername })) {
+                tempUsername = `${finalUsername}_${counter}`;
+                counter++;
+            }
+            finalUsername = tempUsername;
+        }
+
+        // Check if user already exists (by email or username)
+        const existingUser = await User.findOne({ 
+            $or: [
+                { email }, 
+                { username: finalUsername }
+            ] 
+        });
+        
         if (existingUser) {
-            return res.status(400).json({ success: false, message: 'Username or email already in use' });
+            if (existingUser.email === email) {
+                return res.status(400).json({ success: false, message: 'Email already in use' });
+            }
+            if (existingUser.username === finalUsername) {
+                return res.status(400).json({ success: false, message: 'Username already in use' });
+            }
         }
 
         // Hash the password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create new user
-        const newUser = new User({
-            username,
+        // Create user data object
+        const userData = {
+            username: finalUsername,
             email,
             phoneNumber,
             password: hashedPassword,
+            accountType,
             isEmailVerified: false,
             verificationRequestCount: 0
-        });
+        };
 
+        // Add business fields if it's a business account
+        if (accountType === 'business') {
+            userData.companyName = companyName;
+            userData.address = address;
+            userData.kraPin = kraPin;
+        }
+
+        // Create new user
+        const newUser = new User(userData);
         await newUser.save();
 
         // Generate and send verification code
@@ -125,7 +182,7 @@ router.post('/register', asyncHandler(async (req, res) => {
 
         res.json({
             success: true,
-            message: "User created successfully!",
+            message: `User created successfully!${accountType === 'business' ? ' Welcome to Arobisca Business!' : ''}`,
             data: newUser
         });
     } catch (error) {
