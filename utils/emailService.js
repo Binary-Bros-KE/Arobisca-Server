@@ -127,7 +127,7 @@ const generateOrderConfirmationEmail = (order, user, generatedPassword = null) =
           <div style="text-align: center; margin-top: 30px; padding: 20px; background: #fffbeb; border-radius: 8px;">
             <h4 style="color: #d97706; margin-bottom: 10px;">Track Your Order</h4>
             <p>You can track your order status and view order history by visiting your dashboard:</p>
-            <a href="${process.env.FRONTEND_URL}/dashboard/orders" class="tracking-link">
+            <a href="${process.env.FRONTEND_URL}/dashboard?tab=orders" class="tracking-link">
               View Order Dashboard
             </a>
             <p style="margin-top: 15px; font-size: 14px; color: #666;">
@@ -219,7 +219,7 @@ const generateStatusUpdateEmail = (order, oldStatus, newStatus, adminNotes = nul
             : ""
         }
 
-        <a href="${process.env.FRONTEND_URL}/dashboard/orders" class="btn">View My Orders</a>
+        <a href="${process.env.FRONTEND_URL}/dashboard/dashboard?tab=orders" class="btn">View My Orders</a>
       </div>
       <footer>
         &copy; ${new Date().getFullYear()} Arobisca Coffee. All rights reserved.
