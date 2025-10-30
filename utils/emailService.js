@@ -219,7 +219,7 @@ const generateStatusUpdateEmail = (order, oldStatus, newStatus, adminNotes = nul
             : ""
         }
 
-        <a href="${process.env.FRONTEND_URL}/dashboard/dashboard?tab=orders" class="btn">View My Orders</a>
+        <a href="${process.env.FRONTEND_URL}/dashboard?tab=orders" class="btn">View My Orders</a>
       </div>
       <footer>
         &copy; ${new Date().getFullYear()} Arobisca Coffee. All rights reserved.
