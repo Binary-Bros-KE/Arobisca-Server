@@ -144,6 +144,10 @@ const orderSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  vatTotal: {
+    type: Number,
+    required: false
+  },
 
   // Coupon information
   coupon: couponSchema,

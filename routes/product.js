@@ -95,7 +95,7 @@ router.post('/', uploadProduct.fields([
     try {
         // Extract product data from the request body
         console.log(req.body);
-        const { name, description, quantity, price, offerPrice, proCategoryId } = req.body;
+        const { name, description, quantity, price, offerPrice, vat, proCategoryId } = req.body;
 
         // Check if any required fields are missing
         if (!name || !quantity || !price || !proCategoryId) {
@@ -153,7 +153,8 @@ router.post('/', uploadProduct.fields([
             description, 
             quantity, 
             price, 
-            offerPrice, 
+            offerPrice,
+            vat, 
             proCategoryId, 
             images: imageDataArray 
         });
@@ -181,7 +182,7 @@ router.put('/:id', uploadProduct.fields([
 ]), asyncHandler(async (req, res) => {
     const productId = req.params.id;
     try {
-        const { name, description, quantity, price, offerPrice, proCategoryId } = req.body;
+        const { name, description, quantity, price, offerPrice, vat, proCategoryId } = req.body;
 
         // Find the product by ID
         const productToUpdate = await Product.findById(productId);
@@ -195,6 +196,7 @@ router.put('/:id', uploadProduct.fields([
         productToUpdate.quantity = quantity || productToUpdate.quantity;
         productToUpdate.price = price || productToUpdate.price;
         productToUpdate.offerPrice = offerPrice || productToUpdate.offerPrice;
+        productToUpdate.vat = vat || productToUpdate.vat;
         productToUpdate.proCategoryId = proCategoryId || productToUpdate.proCategoryId;
 
         // Handle image updates

@@ -6,7 +6,7 @@ const router = express.Router();
 const Order = require('../model/order');
 const User = require('../model/user');
 const ShippingFee = require('../model/ShippingFee');
-const { sendEmail, generateOrderConfirmationEmail, generateStatusUpdateEmail } = require('../utils/emailService');
+const { sendEmail, generateOrderConfirmationEmail, generateStatusUpdateEmail, generateAdminOrderNotificationEmail } = require('../utils/emailService');
 
 // Helper function to generate random password
 const generateRandomPassword = (length = 12) => {
@@ -109,6 +109,7 @@ router.post('/', asyncHandler(async (req, res) => {
             discount,
             shipping,
             total,
+            vatTotal, // New: VAT total
             accountType, // New: account type for guest users
             businessInfo, // New: business info for guest business users
             creditTerms // New: credit terms for business credit purchases
@@ -201,6 +202,7 @@ router.post('/', asyncHandler(async (req, res) => {
             paymentMethod,
             deliveryNote,
             subtotal,
+            vatTotal,
             discount: discount || 0,
             shipping,
             total,
@@ -242,6 +244,19 @@ router.post('/', asyncHandler(async (req, res) => {
             `Order Confirmation - ${populatedOrder.orderNumber}`,
             emailHtml
         );
+
+
+        // ADD THIS: Send email to admin
+        const adminEmailHtml = generateAdminOrderNotificationEmail(
+            populatedOrder.toObject(),
+            userObject
+        );
+        await sendEmail(
+            'coffeearobisca@gmail.com', // Admin email
+            `NEW ORDER: ${populatedOrder.orderNumber} - KES ${populatedOrder.total.toLocaleString()}`,
+            adminEmailHtml
+        );
+
 
         res.json({
             success: true,
@@ -291,131 +306,131 @@ router.get('/', asyncHandler(async (req, res) => {
 
 // Update order status (with admin notes and improved wording)
 router.put('/:id/status', asyncHandler(async (req, res) => {
-  try {
-    const orderId = req.params.id;
-    const { orderStatus, adminNotes } = req.body;
+    try {
+        const orderId = req.params.id;
+        const { orderStatus, adminNotes } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ success: false, message: "Invalid order ID." });
+        if (!mongoose.Types.ObjectId.isValid(orderId)) {
+            return res.status(400).json({ success: false, message: "Invalid order ID." });
+        }
+
+        if (!orderStatus) {
+            return res.status(400).json({ success: false, message: "Order status is required." });
+        }
+
+        const order = await Order.findById(orderId).populate('user', 'email firstName lastName');
+        if (!order) {
+            return res.status(404).json({ success: false, message: "Order not found." });
+        }
+
+        const oldStatus = order.orderStatus;
+
+        const updateData = { orderStatus };
+
+        // 🟤 Clear or set admin notes
+        updateData.adminNotes = adminNotes?.trim() ? adminNotes : "";
+
+        // 🟤 Mark COD orders as paid upon delivery
+        if (orderStatus === 'delivered' && order.paymentMethod === 'cod') {
+            updateData.paymentStatus = 'paid';
+        }
+
+        const updatedOrder = await Order.findByIdAndUpdate(orderId, updateData, { new: true })
+            .populate('user', 'email firstName lastName')
+            .populate('items.product', 'name');
+
+        // 🟤 Send email only if status actually changed
+        if (oldStatus !== orderStatus) {
+            const emailHtml = generateStatusUpdateEmail(
+                updatedOrder.toObject(),
+                oldStatus,
+                orderStatus,
+                adminNotes?.trim() ? adminNotes : null // ⬅ ensures blank note is not included
+            );
+            await sendEmail(
+                order.user.email,
+                `Order #${updatedOrder.orderNumber} — ${orderStatus.toUpperCase()} Update`,
+                emailHtml
+            );
+        }
+
+        res.json({
+            success: true,
+            message: `Order status updated to "${orderStatus}" successfully.`,
+            data: updatedOrder
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: error.message });
     }
-
-    if (!orderStatus) {
-      return res.status(400).json({ success: false, message: "Order status is required." });
-    }
-
-    const order = await Order.findById(orderId).populate('user', 'email firstName lastName');
-    if (!order) {
-      return res.status(404).json({ success: false, message: "Order not found." });
-    }
-
-    const oldStatus = order.orderStatus;
-
-    const updateData = { orderStatus };
-
-    // 🟤 Clear or set admin notes
-    updateData.adminNotes = adminNotes?.trim() ? adminNotes : "";
-
-    // 🟤 Mark COD orders as paid upon delivery
-    if (orderStatus === 'delivered' && order.paymentMethod === 'cod') {
-      updateData.paymentStatus = 'paid';
-    }
-
-    const updatedOrder = await Order.findByIdAndUpdate(orderId, updateData, { new: true })
-      .populate('user', 'email firstName lastName')
-      .populate('items.product', 'name');
-
-    // 🟤 Send email only if status actually changed
-    if (oldStatus !== orderStatus) {
-      const emailHtml = generateStatusUpdateEmail(
-        updatedOrder.toObject(),
-        oldStatus,
-        orderStatus,
-        adminNotes?.trim() ? adminNotes : null // ⬅ ensures blank note is not included
-      );
-      await sendEmail(
-        order.user.email,
-        `Order #${updatedOrder.orderNumber} — ${orderStatus.toUpperCase()} Update`,
-        emailHtml
-      );
-    }
-
-    res.json({
-      success: true,
-      message: `Order status updated to "${orderStatus}" successfully.`,
-      data: updatedOrder
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: error.message });
-  }
 }));
 
 // Add this to your orders routes
 router.put('/:id/payment-status', asyncHandler(async (req, res) => {
-  try {
-    const orderId = req.params.id;
-    const { paymentStatus } = req.body;
+    try {
+        const orderId = req.params.id;
+        const { paymentStatus } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(orderId)) {
-      return res.status(400).json({ success: false, message: "Invalid order ID." });
+        if (!mongoose.Types.ObjectId.isValid(orderId)) {
+            return res.status(400).json({ success: false, message: "Invalid order ID." });
+        }
+
+        if (!paymentStatus) {
+            return res.status(400).json({ success: false, message: "Payment status is required." });
+        }
+
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).json({ success: false, message: "Order not found." });
+        }
+
+        const updatedOrder = await Order.findByIdAndUpdate(
+            orderId,
+            { paymentStatus },
+            { new: true }
+        )
+            .populate('user', 'email firstName lastName phoneNumber')
+            .populate('items.product', 'name images');
+
+        res.json({
+            success: true,
+            message: `Payment status updated to "${paymentStatus}" successfully.`,
+            data: updatedOrder
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: error.message });
     }
-
-    if (!paymentStatus) {
-      return res.status(400).json({ success: false, message: "Payment status is required." });
-    }
-
-    const order = await Order.findById(orderId);
-    if (!order) {
-      return res.status(404).json({ success: false, message: "Order not found." });
-    }
-
-    const updatedOrder = await Order.findByIdAndUpdate(
-      orderId, 
-      { paymentStatus }, 
-      { new: true }
-    )
-      .populate('user', 'email firstName lastName phoneNumber')
-      .populate('items.product', 'name images');
-
-    res.json({
-      success: true,
-      message: `Payment status updated to "${paymentStatus}" successfully.`,
-      data: updatedOrder
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, message: error.message });
-  }
 }));
 
 // Get orders by user ID
 router.get('/user/:userId', asyncHandler(async (req, res) => {
-  try {
-    const { userId } = req.params;
-    const { page = 1, limit = 50 } = req.query;
+    try {
+        const { userId } = req.params;
+        const { page = 1, limit = 50 } = req.query;
 
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return res.status(400).json({ success: false, message: "Invalid user ID." });
+        if (!mongoose.Types.ObjectId.isValid(userId)) {
+            return res.status(400).json({ success: false, message: "Invalid user ID." });
+        }
+
+        const orders = await Order.find({ user: userId })
+            .populate('user', 'firstName lastName email phoneNumber')
+            .populate('items.product', 'name images')
+            .sort({ orderDate: -1 })
+            .limit(limit * 1)
+            .skip((page - 1) * limit);
+
+        const total = await Order.countDocuments({ user: userId });
+
+        res.json({
+            success: true,
+            message: "User orders retrieved successfully.",
+            data: orders,
+            total
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
-
-    const orders = await Order.find({ user: userId })
-      .populate('user', 'firstName lastName email phoneNumber')
-      .populate('items.product', 'name images')
-      .sort({ orderDate: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
-
-    const total = await Order.countDocuments({ user: userId });
-
-    res.json({
-      success: true,
-      message: "User orders retrieved successfully.",
-      data: orders,
-      total
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
 }));
 
 // Delete an order

@@ -32,9 +32,16 @@ const generateToken = async (req, res, next) => {
 
 // Send STK Push Request
 router.post("/stk", generateToken, asyncHandler(async (req, res) => {
-    const { phone, amount } = req.body;
-    const formattedPhone = phone.substring(1);
+  var { phone, amount } = req.body;
+  const formattedPhone = phone.substring(1);
 
+  // format amount such that amount can not be a decimal
+  // Do not return just format so that amount is integer
+  var amount = Math.floor(amount);
+
+
+  console.log("STK push request received:", amount);
+  
     const passkey = process.env.MPESA_PASSKEY;
     const shortcode = process.env.MPESA_SHORTCODE;
     const reqUrl = process.env.MPESA_STK_PUSH_URL;
@@ -79,7 +86,7 @@ router.post("/stk", generateToken, asyncHandler(async (req, res) => {
       // Return the unique identifiers with the response
       res.status(200).json(response.data);
     } catch (err) {
-      console.error("STK push error:", err.message);
+      console.error("STK push error:", err);
       res
         .status(400)
         .json({ error: "Failed to initiate STK push", details: err.message });

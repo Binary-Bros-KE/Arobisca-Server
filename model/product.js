@@ -21,6 +21,9 @@ const productSchema = new mongoose.Schema({
     offerPrice: {
         type: Number
     },
+    vat: {
+        type: Number
+    },
     proCategoryId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Category',
