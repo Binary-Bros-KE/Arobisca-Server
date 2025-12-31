@@ -22,7 +22,8 @@ const productSchema = new mongoose.Schema({
         type: Number
     },
     vat: {
-        type: Number
+        type: Number,
+        default: 16
     },
     proCategoryId: {
         type: mongoose.Schema.Types.ObjectId,
